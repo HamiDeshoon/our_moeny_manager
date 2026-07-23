@@ -69,7 +69,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
 
   // Category breakdown for Donut chart (Current Month)
   const categoryData = useMemo(() => {
-    const expenseTxs = transactions.filter((t) => t.type === 'EXPENSE');
+    const expenseTxs = (transactions || []).filter((t) => t.type === 'EXPENSE');
     const map: Record<string, number> = {};
 
     for (const t of expenseTxs) {
@@ -83,7 +83,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
 
   // Partner spending comparison per category for Bar chart
   const partnerComparisonData = useMemo(() => {
-    const expenseTxs = transactions.filter((t) => t.type === 'EXPENSE');
+    const expenseTxs = (transactions || []).filter((t) => t.type === 'EXPENSE');
     const map: Record<string, { partnerA: number; partnerB: number }> = {};
 
     for (const t of expenseTxs) {

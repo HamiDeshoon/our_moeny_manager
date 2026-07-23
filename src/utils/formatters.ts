@@ -215,10 +215,14 @@ export function formatMoney(amount: number, symbol: string = 'تومان'): stri
   const num = Number(amount) || 0;
   const isToman = symbol.includes('تومان') || symbol.toLowerCase().includes('toman') || symbol === 'IRT' || symbol === 'T';
 
-  if (isToman || num % 1 === 0) {
-    // Whole numbers or Toman
+  if (isToman) {
     const formatted = Math.round(num).toLocaleString('en-US');
-    return `${symbol} ${formatted}`.trim();
+    return `${formatted} ${symbol}`.trim();
+  }
+
+  if (num % 1 === 0) {
+    const formatted = Math.round(num).toLocaleString('en-US');
+    return `${symbol}${formatted}`.trim();
   }
 
   // Decimals for USD / EUR / etc.
@@ -226,5 +230,5 @@ export function formatMoney(amount: number, symbol: string = 'تومان'): stri
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `${symbol} ${formatted}`.trim();
+  return `${symbol}${formatted}`.trim();
 }

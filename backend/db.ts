@@ -378,11 +378,22 @@ class Database {
   }
 
   getThreeMonthTrends(referenceMonth?: string): MonthTrendData[] {
-    const ref = referenceMonth && referenceMonth.length >= 7 ? new Date(`${referenceMonth.substring(0, 7)}-01`) : new Date();
+    let refYear: number;
+    let refMonth: number;
+    if (referenceMonth && /^\d{4}-\d{2}/.test(referenceMonth)) {
+      const [y, m] = referenceMonth.substring(0, 7).split('-').map(Number);
+      refYear = y;
+      refMonth = m - 1;
+    } else {
+      const now = new Date();
+      refYear = now.getFullYear();
+      refMonth = now.getMonth();
+    }
+
     const months: string[] = [];
 
     for (let i = 2; i >= 0; i--) {
-      const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+      const d = new Date(refYear, refMonth - i, 1);
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       months.push(`${yyyy}-${mm}`);

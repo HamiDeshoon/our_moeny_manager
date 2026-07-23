@@ -76,7 +76,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
   // Calculate actual spending per category in current month
   const categorySpentMap = React.useMemo(() => {
     const map: Record<string, number> = {};
-    const expenseTxs = transactions.filter((t) => t.type === 'EXPENSE');
+    const expenseTxs = (transactions || []).filter((t) => t.type === 'EXPENSE');
     for (const t of expenseTxs) {
       map[t.category] = (map[t.category] || 0) + Number(t.amount || 0);
     }
