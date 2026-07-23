@@ -2,6 +2,8 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
 import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult } from '../src/types.js';
 
+const MODEL = 'gemini-1.5-flash';
+
 // ──────────────────────────────────────────────
 // Gemini Client Factory
 // ──────────────────────────────────────────────
@@ -271,7 +273,7 @@ Output valid JSON matching the schema.
   return callGeminiWithRetry<AIParsedVoice>(
     async () => {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: MODEL,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
@@ -349,7 +351,7 @@ Extract:
   return callGeminiWithRetry<AIScanReceipt>(
     async () => {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: MODEL,
         contents: { parts: [imagePart, { text: promptText }] },
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
@@ -422,7 +424,7 @@ TASK:
   return callGeminiWithRetry<AIInsightResponse>(
     async () => {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: MODEL,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
@@ -502,7 +504,7 @@ RULES:
   return callGeminiWithRetry<AIParsedSheetResult>(
     async () => {
       const response = await ai.models.generateContent({
-        model: 'gemini-3.6-flash',
+        model: MODEL,
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });

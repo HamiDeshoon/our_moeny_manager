@@ -22,7 +22,7 @@ import {
   Transaction,
 } from '../types';
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-1.5-flash';
 
 function getKey(): string {
   try {
