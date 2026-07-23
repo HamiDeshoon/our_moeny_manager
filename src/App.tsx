@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from './services/api';
 import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, Transaction } from './types';
-import { gregorianToJalali, getJalaliMonthGregorianRange } from './utils/formatters';
+import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
 
 import { Header } from './components/Header';
 import { SummaryCards } from './components/SummaryCards';
@@ -44,9 +44,14 @@ const DEFAULT_SUMMARY: HouseholdSummary = {
 };
 
 export default function App() {
+  // Initialize to the current Jalali month's Gregorian range so the Jalali
+  // <select> in the Header matches an <option> on first render (avoids the
+  // initial state mismatch where YYYY-MM had no matching option).
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const [jy, jm] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    const { startDate, endDate } = getJalaliMonthGregorianRange(jy, jm);
+    return `${startDate}..${endDate}`;
   });
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights'>('dashboard');
@@ -170,22 +175,22 @@ export default function App() {
   const activeSettings = settings || DEFAULT_SETTINGS;
   const activeSummary = summary || DEFAULT_SUMMARY;
 
-if (isLoading && !settings) {
-     return (
-       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-100 font-vazirmatn">
-         <div className="w-14 h-14 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4 bg-slate-800/50 p-1" />
-         <h2 className="text-base font-bold tracking-tight text-slate-100">در حال بارگذاری DuoSpend...</h2>
-         <p className="text-xs text-slate-400 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
-       </div>
-     );
-   }
+  if (isLoading && !settings) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 flex flex-col items-center justify-center p-4 text-slate-800 font-vazirmatn">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <h2 className="text-base font-bold tracking-tight text-slate-800">در حال بارگذاری DuoSpend...</h2>
+        <p className="text-xs text-slate-500 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
+      </div>
+    );
+  }
 
   if (loadError && !settings) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-slate-100 font-vazirmatn text-center">
-        <div className="p-6 bg-slate-800 border border-slate-700 rounded-3xl max-w-md space-y-4 shadow-2xl">
-          <h2 className="text-lg font-extrabold text-rose-400">خطا در اتصال به سرور</h2>
-          <p className="text-xs text-slate-300">{loadError}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 flex flex-col items-center justify-center p-6 text-slate-800 font-vazirmatn text-center">
+        <div className="p-6 bg-white border border-slate-200 rounded-3xl max-w-md space-y-4 shadow-xl">
+          <h2 className="text-lg font-extrabold text-rose-600">خطا در اتصال به سرور</h2>
+          <p className="text-xs text-slate-600">{loadError}</p>
           <button
             onClick={() => loadData()}
             className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
@@ -200,7 +205,7 @@ if (isLoading && !settings) {
   return (
     <div
       dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-slate-950 text-slate-100 font-vazirmatn antialiased selection:bg-indigo-600 selection:text-white"
+      className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 text-slate-800 font-vazirmatn antialiased selection:bg-indigo-600 selection:text-white"
     >
       {/* Header */}
       <Header
