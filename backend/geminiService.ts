@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
 import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult } from '../src/types.js';
 
-const MODEL = 'gemini-1.5-flash';
+const MODEL = 'gemini-3.5-flash-lite';
 
 // ──────────────────────────────────────────────
 // Gemini Client Factory
