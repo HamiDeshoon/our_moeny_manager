@@ -19,6 +19,30 @@ import { CSVImportModal } from './components/CSVImportModal';
 import { LoginModal } from './components/LoginModal';
 import { exportToCSV } from './utils/exporter';
 
+const DEFAULT_SETTINGS: AppSettings = {
+  geminiApiKey: '',
+  currencySymbol: 'تومان',
+  partnerA: {
+    id: 'partner_a',
+    name: 'سیدحمید عقل مندصرمی',
+    avatar: '👨‍💼',
+    color: '#0284c7',
+  },
+  partnerB: {
+    id: 'partner_b',
+    name: 'فاطمه نیک سرشت',
+    avatar: '👩‍⚕️',
+    color: '#16a34a',
+  },
+  isRtl: true,
+  useJalaliDate: true,
+};
+
+const DEFAULT_SUMMARY: HouseholdSummary = {
+  partnerATotalPaid: 0,
+  partnerBTotalPaid: 0,
+};
+
 export default function App() {
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
@@ -45,6 +69,7 @@ export default function App() {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Modal State
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
@@ -58,7 +83,12 @@ export default function App() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const fetchedSettings = await api.getSettings();
+      setLoadError(null);
+
+      const fetchedSettings = await api.getSettings().catch((err) => {
+        console.warn('Fallback settings used:', err);
+        return DEFAULT_SETTINGS;
+      });
       setSettings(fetchedSettings);
 
       let targetMonth = selectedMonth;
@@ -71,18 +101,19 @@ export default function App() {
       }
 
       const [fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills] = await Promise.all([
-        api.getTransactions(targetMonth),
-        api.getHouseholdSummary(targetMonth),
-        api.getBudgets(),
-        api.getBills(),
+        api.getTransactions(targetMonth).catch(() => []),
+        api.getHouseholdSummary(targetMonth).catch(() => DEFAULT_SUMMARY),
+        api.getBudgets().catch(() => []),
+        api.getBills().catch(() => []),
       ]);
 
       setTransactions(fetchedTxs);
       setSummary(fetchedSummary);
       setBudgets(fetchedBudgets);
       setBills(fetchedBills);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading app data:', err);
+      setLoadError(err.message || 'Failed to connect to backend server');
     } finally {
       setIsLoading(false);
     }
@@ -107,9 +138,10 @@ export default function App() {
     await api.deleteTransaction(id);
     await loadData();
   };
-  // Budget Handler
-  const handleUpdateBudgets = async (updatedBudgets: Budget[]) => {
-    await api.updateBudgets(updatedBudgets);
+
+  // Budget Handlers
+  const handleUpdateBudgets = async (newBudgets: Budget[]) => {
+    await api.updateBudgets(newBudgets);
     await loadData();
   };
 
@@ -135,26 +167,44 @@ export default function App() {
     await loadData();
   };
 
+  const activeSettings = settings || DEFAULT_SETTINGS;
+  const activeSummary = summary || DEFAULT_SUMMARY;
+
   if (isLoading && !settings) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 text-slate-900">
-        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4" />
-        <h2 className="text-base font-bold tracking-tight text-slate-800">Loading DuoSpend Household Ledger...</h2>
-        <p className="text-xs text-slate-500 mt-1">Calculating balances and split shares</p>
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-100 font-vazirmatn">
+        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <h2 className="text-base font-bold tracking-tight text-slate-100">در حال بارگذاری DuoSpend...</h2>
+        <p className="text-xs text-slate-400 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
       </div>
     );
   }
 
-  if (!settings || !summary) return null;
+  if (loadError && !settings) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-slate-100 font-vazirmatn text-center">
+        <div className="p-6 bg-slate-800 border border-slate-700 rounded-3xl max-w-md space-y-4 shadow-2xl">
+          <h2 className="text-lg font-extrabold text-rose-400">خطا در اتصال به سرور</h2>
+          <p className="text-xs text-slate-300">{loadError}</p>
+          <button
+            onClick={() => loadData()}
+            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
+          >
+            تلاش مجدد (Retry Connection)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
-      dir={settings?.isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-600 selection:text-white"
+      dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
+      className="min-h-screen bg-slate-950 text-slate-100 font-vazirmatn antialiased selection:bg-indigo-600 selection:text-white"
     >
       {/* Header */}
       <Header
-        settings={settings}
+        settings={activeSettings}
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         onOpenAddExpense={() => {
@@ -164,7 +214,7 @@ export default function App() {
         onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
         onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
         onOpenCSVImport={() => setIsCSVImportOpen(true)}
-        onExportCSV={() => exportToCSV(transactions, settings, selectedMonth)}
+        onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         currentUser={currentUser}
         onOpenLogin={() => setIsLoginModalOpen(true)}
@@ -176,8 +226,8 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Top Household Settlement & Metric Cards */}
         <SummaryCards
-          summary={summary}
-          settings={settings}
+          summary={activeSummary}
+          settings={activeSettings}
         />
 
         {/* Tab Views */}
@@ -186,12 +236,12 @@ export default function App() {
             <AnalyticsCharts
               transactions={transactions}
               budgets={budgets}
-              settings={settings}
+              settings={activeSettings}
               selectedMonth={selectedMonth}
             />
             <TransactionList
               transactions={transactions}
-              settings={settings}
+              settings={activeSettings}
               onEditTransaction={(tx) => {
                 setEditingTransaction(tx);
                 setIsAddExpenseOpen(true);
@@ -208,7 +258,7 @@ export default function App() {
         {activeTab === 'transactions' && (
           <TransactionList
             transactions={transactions}
-            settings={settings}
+            settings={activeSettings}
             onEditTransaction={(tx) => {
               setEditingTransaction(tx);
               setIsAddExpenseOpen(true);
@@ -225,7 +275,7 @@ export default function App() {
           <BudgetPlanner
             budgets={budgets}
             transactions={transactions}
-            settings={settings}
+            settings={activeSettings}
             onUpdateBudgets={handleUpdateBudgets}
             onRefreshTransactions={loadData}
           />
@@ -234,7 +284,7 @@ export default function App() {
         {activeTab === 'bills' && (
           <BillTracker
             bills={bills}
-            settings={settings}
+            settings={activeSettings}
             onToggleBillPaid={handleToggleBillPaid}
             onAddBill={handleAddBill}
             onDeleteBill={handleDeleteBill}
@@ -244,7 +294,7 @@ export default function App() {
         {activeTab === 'insights' && (
           <AIAdvisor
             selectedMonth={selectedMonth}
-            settings={settings}
+            settings={activeSettings}
           />
         )}
       </main>
@@ -261,7 +311,7 @@ export default function App() {
           editingTransaction ||
           (currentUser ? ({ paidBy: currentUser.partnerId } as Partial<Transaction>) : null)
         }
-        settings={settings}
+        settings={activeSettings}
       />
 
       <VoiceModal
@@ -269,26 +319,27 @@ export default function App() {
         onClose={() => setIsVoiceModalOpen(false)}
         onSaveTransaction={handleSaveTransaction}
         onRefreshData={loadData}
-        settings={settings}
+        settings={activeSettings}
       />
 
       <ReceiptScannerModal
         isOpen={isReceiptModalOpen}
         onClose={() => setIsReceiptModalOpen(false)}
         onSaveTransaction={handleSaveTransaction}
-        settings={settings}
+        settings={activeSettings}
       />
+
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
-        settings={settings}
+        settings={activeSettings}
         onUpdateSettings={handleUpdateSettings}
       />
 
       <CSVImportModal
         isOpen={isCSVImportOpen}
         onClose={() => setIsCSVImportOpen(false)}
-        settings={settings}
+        settings={activeSettings}
         onImportComplete={loadData}
       />
 
