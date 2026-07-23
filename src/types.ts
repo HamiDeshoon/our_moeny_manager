@@ -1,7 +1,7 @@
 
 export type TransactionType = 'EXPENSE' | 'INCOME' | 'TRANSFER';
 
-export type Category = 
+export type Category =
   | 'Groceries'
   | 'Dining & Takeout'
   | 'Rent & Mortgage'
@@ -31,7 +31,8 @@ export interface Transaction {
   paidBy: string; // partner id (e.g. 'partner_a')
   date: string; // YYYY-MM-DD
   notes?: string;
-  vendor?: string;  receiptUrl?: string;
+  vendor?: string;
+  receiptUrl?: string;
   isRecurring?: boolean;
   recurringDay?: number; // Day of month e.g. 1-31
   recurringFrequency?: 'MONTHLY' | 'YEARLY';
@@ -54,8 +55,6 @@ export interface Bill {
   autopay: boolean;
   provider?: string;
 }
-
-
 
 export interface RecurringExpense {
   id: string;
@@ -101,23 +100,33 @@ export interface AIParsedSheetResult {
     paidBy: string; // partner_a or partner_b
     date: string; // YYYY-MM-DD
     vendor?: string;
-    notes?: string;  }>;
+    notes?: string;
+  }>;
 }
 
 export interface AppSettings {
   geminiApiKey: string; // optional override
   currencySymbol: string;
   partnerA: PartnerProfile;
-  partnerB: PartnerProfile;  isRtl?: boolean;  useJalaliDate?: boolean; // Display Shamsi (Jalali) dates
+  partnerB: PartnerProfile;
+  isRtl?: boolean;
+  useJalaliDate?: boolean; // Display Shamsi (Jalali) dates
+  noSettlementsMode?: boolean; // Unified household mode (no debt tracking)
 }
 
 export interface AIParsedVoice {
+  actionType?: 'LOG_EXPENSE' | 'SET_BUDGET' | 'ADD_RECURRING' | 'ADD_BILL';
   title: string;
   amount: number;
   category: Category;
   paidBy: string;
-  date: string;  vendor?: string;
+  date: string;
+  vendor?: string;
   confidenceNotes?: string;
+  monthlyLimit?: number;
+  interval?: 'MONTHLY' | 'BI_MONTHLY' | 'QUARTERLY' | 'YEARLY';
+  dueDateDay?: number;
+  autopay?: boolean;
 }
 
 export interface AIScanReceipt {

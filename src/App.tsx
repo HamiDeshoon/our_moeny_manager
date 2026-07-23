@@ -51,7 +51,6 @@ export default function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [isSettleUpModalOpen, setIsSettleUpModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isCSVImportOpen, setIsCSVImportOpen] = useState(false);
 
@@ -269,6 +268,7 @@ export default function App() {
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
         onSaveTransaction={handleSaveTransaction}
+        onRefreshData={loadData}
         settings={settings}
       />
 

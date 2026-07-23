@@ -75,9 +75,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const numericAmount = parseFloat(amount) || 0;
 
-  const partnerAShare = paidBy === settings.partnerA.id ? numericAmount : 0;
-  const partnerBShare = paidBy === settings.partnerB.id ? numericAmount : 0;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || numericAmount <= 0) return;
@@ -94,8 +91,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         date,
         vendor: vendor.trim() || undefined,
         notes: notes.trim() || undefined,
-        partnerAShare,
-        partnerBShare,
         isRecurring,
         recurringDay: isRecurring ? parseInt(recurringDay) || 1 : undefined,
         recurringFrequency: isRecurring ? 'MONTHLY' : undefined,

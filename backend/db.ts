@@ -9,7 +9,8 @@ interface DatabaseStore {
   settings: AppSettings;
   transactions: Transaction[];
   budgets: Budget[];
-  bills: Bill[];  recurringExpenses: RecurringExpense[];
+  bills: Bill[];
+  recurringExpenses: RecurringExpense[];
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -26,7 +27,8 @@ const DEFAULT_SETTINGS: AppSettings = {
     name: 'فاطمه نیک سرشت',
     avatar: '👩‍⚕️',
     color: '#16a34a', // Emerald green
-  },  isRtl: true,
+  },
+  isRtl: true,
 
   useJalaliDate: true,
 };
@@ -142,7 +144,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_a',
     date: `${getCurrentMonthStr()}-03`,
     vendor: 'Hyperstar',
-    notes: 'Fresh fruits, vegetables, dairy, and pantry items',    createdAt: new Date().toISOString(),
+    notes: 'Fresh fruits, vegetables, dairy, and pantry items',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'tx-2',
@@ -153,7 +156,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_b',
     date: `${getCurrentMonthStr()}-05`,
     vendor: 'Cafe Tehroon',
-    notes: 'Dinner and beverages date for Hamid & Fatemeh',    createdAt: new Date().toISOString(),
+    notes: 'Dinner and beverages date for Hamid & Fatemeh',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'tx-3',
@@ -164,7 +168,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_a',
     date: `${getCurrentMonthStr()}-01`,
     vendor: 'Apartment Landlord',
-    notes: 'Direct transfer for this month rent',    isRecurring: true,
+    notes: 'Direct transfer for this month rent',
+    isRecurring: true,
     recurringDay: 1,
     recurringFrequency: 'MONTHLY',
     createdAt: new Date().toISOString(),
@@ -178,7 +183,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_b',
     date: `${getCurrentMonthStr()}-08`,
     vendor: 'Power & Gas Authority',
-    notes: 'Paid via mobile bank app',    isRecurring: true,
+    notes: 'Paid via mobile bank app',
+    isRecurring: true,
     recurringDay: 8,
     recurringFrequency: 'MONTHLY',
     createdAt: new Date().toISOString(),
@@ -192,7 +198,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_b',
     date: `${getCurrentMonthStr()}-10`,
     vendor: 'Digikala',
-    notes: 'Kitchen blender and filter cartridges',    createdAt: new Date().toISOString(),
+    notes: 'Kitchen blender and filter cartridges',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'tx-6',
@@ -203,7 +210,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_a',
     date: `${getCurrentMonthStr()}-12`,
     vendor: 'Ofogh Kourosh',
-    notes: 'Cooking oil, rice, and breakfast goods',    createdAt: new Date().toISOString(),
+    notes: 'Cooking oil, rice, and breakfast goods',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'tx-7',
@@ -214,7 +222,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_b',
     date: `${getCurrentMonthStr()}-14`,
     vendor: 'Book Garden',
-    notes: 'Movie tickets & novel purchase',    createdAt: new Date().toISOString(),
+    notes: 'Movie tickets & novel purchase',
+    createdAt: new Date().toISOString(),
   },
   {
     id: 'tx-8',
@@ -225,7 +234,8 @@ const INITIAL_TRANSACTIONS: Transaction[] = [
     paidBy: 'partner_a',
     date: `${getCurrentMonthStr()}-16`,
     vendor: 'Snapp / Gas Station',
-    notes: 'Commute and vehicle gas refill',    createdAt: new Date().toISOString(),
+    notes: 'Commute and vehicle gas refill',
+    createdAt: new Date().toISOString(),
   }
 ];
 
@@ -249,7 +259,8 @@ class Database {
           settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
           transactions: parsed.transactions || INITIAL_TRANSACTIONS,
           budgets: parsed.budgets || DEFAULT_BUDGETS,
-          bills: parsed.bills || DEFAULT_BILLS,          recurringExpenses: parsed.recurringExpenses || DEFAULT_RECURRING_EXPENSES,
+          bills: parsed.bills || DEFAULT_BILLS,
+          recurringExpenses: parsed.recurringExpenses || DEFAULT_RECURRING_EXPENSES,
         };
       }
     } catch (err) {
@@ -260,7 +271,8 @@ class Database {
       settings: DEFAULT_SETTINGS,
       transactions: INITIAL_TRANSACTIONS,
       budgets: DEFAULT_BUDGETS,
-      bills: DEFAULT_BILLS,      recurringExpenses: DEFAULT_RECURRING_EXPENSES,
+      bills: DEFAULT_BILLS,
+      recurringExpenses: DEFAULT_RECURRING_EXPENSES,
     };
     this.saveData(initialStore);
     return initialStore;
@@ -430,10 +442,9 @@ class Database {
   }
 
   addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Transaction {
-    const amount = Number(tx.amount) || 0;
-    const partnerAId = this.data.settings.partnerA.id;
     const newTx: Transaction = {
-      ...tx,      id: `tx-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      ...tx,
+      id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       createdAt: new Date().toISOString(),
     };
     this.data.transactions.unshift(newTx);
@@ -444,12 +455,7 @@ class Database {
   updateTransaction(id: string, updates: Partial<Transaction>): Transaction | null {
     const idx = this.data.transactions.findIndex((t) => t.id === id);
     if (idx === -1) return null;
-    const current = this.data.transactions[idx];
-    const updated = { ...current, ...updates };
-
-    const amount = Number(updated.amount) || 0;
-    const partnerAId = this.data.settings.partnerA.id;
-    this.data.transactions[idx] = updated;
+    this.data.transactions[idx] = { ...this.data.transactions[idx], ...updates };
     this.saveData();
     return this.data.transactions[idx];
   }

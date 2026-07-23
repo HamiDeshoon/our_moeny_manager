@@ -76,7 +76,6 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
 
     try {
       const total = typeof editableAmount === 'number' ? editableAmount : Number(editableAmount) || 0;
-      const half = Math.round((total / 2) * 100) / 100;
 
       await onSaveTransaction({
         title: editableVendor ? `${editableVendor} Receipt` : 'Scanned Receipt',
@@ -86,9 +85,6 @@ export const ReceiptScannerModal: React.FC<ReceiptScannerModalProps> = ({
         paidBy,
         date: editableDate || new Date().toISOString().split('T')[0],
         vendor: editableVendor,
-        splitType: 'EQUAL',
-        partnerAShare: half,
-        partnerBShare: Math.round((total - half) * 100) / 100,
         notes: scanResult.items && scanResult.items.length > 0
           ? `Items: ${scanResult.items.map((i) => i.name).join(', ')}`
           : 'Receipt OCR processed by Gemini Vision',

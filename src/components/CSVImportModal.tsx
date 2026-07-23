@@ -140,9 +140,6 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
 
     try {
       const formattedForApi: Omit<Transaction, 'id' | 'createdAt'>[] = validItems.map((item) => {
-        const partnerAShare = item.paidBy === partnerA.id ? item.amount : 0;
-        const partnerBShare = item.paidBy === partnerB.id ? item.amount : 0;
-
         return {
           title: item.title,
           amount: item.amount,
@@ -150,9 +147,8 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
           category: item.category,
           paidBy: item.paidBy,
           date: item.date,
-          notes: item.notes ? item.notes : 'Imported via Gemini AI Sheet Importer',
-          splitType: item.          partnerAShare,
-          partnerBShare,
+          vendor: item.vendor,
+          notes: item.notes || 'Imported via Gemini AI Sheet Importer',
         };
       });
 

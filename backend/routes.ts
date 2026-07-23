@@ -81,6 +81,7 @@ apiRouter.post('/settings/test-key', async (req, res) => {
       'Test connection $10 coffee paid by Alex',
       settings.partnerA,
       settings.partnerB,
+      settings.currencySymbol || 'تومان',
       customKey
     );
     res.json({ success: true, message: 'Gemini API key verified successfully!', sampleParsed: result });

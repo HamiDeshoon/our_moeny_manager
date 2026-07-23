@@ -1,0 +1,334 @@
+{
+  "settings": {
+    "geminiApiKey": "Gemini API key is missing. Set GEMINI_API_KEY env variable or enter your key in Settings.",
+    "currencySymbol": "تومان",
+    "partnerA": {
+      "id": "partner_a",
+      "name": "سیدحمید عقل مندصرمی",
+      "avatar": "👨‍💼",
+      "color": "#0284c7"
+    },
+    "partnerB": {
+      "id": "partner_b",
+      "name": "فاطمه نیک سرشت",
+      "avatar": "👩‍⚕️",
+      "color": "#16a34a"
+    },
+    "isRtl": true,
+    "useJalaliDate": true,
+    "noSettlementsMode": true
+  },
+  "transactions": [
+    {
+      "id": "tx-rec-1784805694141-77pf",
+      "title": "Electric & Gas Utility Bill (قبوض برق و گاز)",
+      "amount": 450000,
+      "type": "EXPENSE",
+      "category": "Utilities & Internet",
+      "paidBy": "partner_b",
+      "date": "2026-04-08",
+      "vendor": "Power & Gas Authority",
+      "notes": "Paid via mobile bank app (Auto Recurring) (Auto Recurring) (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 8,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:34.141Z"
+    },
+    {
+      "id": "tx-rec-1784805694141-lx52",
+      "title": "Monthly Apartment Rent (اجاره ماهانه)",
+      "amount": 35000000,
+      "type": "EXPENSE",
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "date": "2026-04-01",
+      "vendor": "Apartment Landlord",
+      "notes": "Direct transfer for this month rent (Auto Recurring) (Auto Recurring) (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 1,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:34.141Z"
+    },
+    {
+      "id": "tx-rec-1784805677400-ix57",
+      "title": "Monthly Apartment Rent (اجاره ماهانه)",
+      "amount": 35000000,
+      "type": "EXPENSE",
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "date": "2026-06-01",
+      "vendor": "Apartment Landlord",
+      "notes": "Direct transfer for this month rent (Auto Recurring) (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 1,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:17.400Z"
+    },
+    {
+      "id": "tx-rec-1784805677400-gs4g",
+      "title": "Electric & Gas Utility Bill (قبوض برق و گاز)",
+      "amount": 450000,
+      "type": "EXPENSE",
+      "category": "Utilities & Internet",
+      "paidBy": "partner_b",
+      "date": "2026-06-08",
+      "vendor": "Power & Gas Authority",
+      "notes": "Paid via mobile bank app (Auto Recurring) (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 8,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:17.400Z"
+    },
+    {
+      "id": "tx-rec-1784805677399-6r3r",
+      "title": "Electric & Gas Utility Bill (قبوض برق و گاز)",
+      "amount": 450000,
+      "type": "EXPENSE",
+      "category": "Utilities & Internet",
+      "paidBy": "partner_b",
+      "date": "2026-05-08",
+      "vendor": "Power & Gas Authority",
+      "notes": "Paid via mobile bank app (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 8,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:17.399Z"
+    },
+    {
+      "id": "tx-rec-1784805677399-r98b",
+      "title": "Monthly Apartment Rent (اجاره ماهانه)",
+      "amount": 35000000,
+      "type": "EXPENSE",
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "date": "2026-05-01",
+      "vendor": "Apartment Landlord",
+      "notes": "Direct transfer for this month rent (Auto Recurring)",
+      "isRecurring": true,
+      "recurringDay": 1,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:21:17.399Z"
+    },
+    {
+      "id": "tx-1",
+      "title": "Hyperstar Weekly Groceries (خریدهای هایپراستار)",
+      "amount": 1850000,
+      "type": "EXPENSE",
+      "category": "Groceries",
+      "paidBy": "partner_a",
+      "date": "2026-07-03",
+      "vendor": "Hyperstar",
+      "notes": "Fresh fruits, vegetables, dairy, and pantry items",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-2",
+      "title": "Cafe Tehroon Date Night (شام و کافه طهرون)",
+      "amount": 780000,
+      "type": "EXPENSE",
+      "category": "Dining & Takeout",
+      "paidBy": "partner_b",
+      "date": "2026-07-05",
+      "vendor": "Cafe Tehroon",
+      "notes": "Dinner and beverages date for Hamid & Fatemeh",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-3",
+      "title": "Monthly Apartment Rent (اجاره ماهانه)",
+      "amount": 35000000,
+      "type": "EXPENSE",
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "date": "2026-07-01",
+      "vendor": "Apartment Landlord",
+      "notes": "Direct transfer for this month rent",
+      "isRecurring": true,
+      "recurringDay": 1,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-4",
+      "title": "Electric & Gas Utility Bill (قبوض برق و گاز)",
+      "amount": 450000,
+      "type": "EXPENSE",
+      "category": "Utilities & Internet",
+      "paidBy": "partner_b",
+      "date": "2026-07-08",
+      "vendor": "Power & Gas Authority",
+      "notes": "Paid via mobile bank app",
+      "isRecurring": true,
+      "recurringDay": 8,
+      "recurringFrequency": "MONTHLY",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-5",
+      "title": "Digikala Home Supplies (خریدهای دیجی‌کالا)",
+      "amount": 1420000,
+      "type": "EXPENSE",
+      "category": "Household & Supplies",
+      "paidBy": "partner_b",
+      "date": "2026-07-10",
+      "vendor": "Digikala",
+      "notes": "Kitchen blender and filter cartridges",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-6",
+      "title": "Ofogh Kourosh Supermarket (افق کوروش)",
+      "amount": 640000,
+      "type": "EXPENSE",
+      "category": "Groceries",
+      "paidBy": "partner_a",
+      "date": "2026-07-12",
+      "vendor": "Ofogh Kourosh",
+      "notes": "Cooking oil, rice, and breakfast goods",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-7",
+      "title": "Book Garden Cinema & Books (باغ کتاب)",
+      "amount": 450000,
+      "type": "EXPENSE",
+      "category": "Entertainment & Subscriptions",
+      "paidBy": "partner_b",
+      "date": "2026-07-14",
+      "vendor": "Book Garden",
+      "notes": "Movie tickets & novel purchase",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    },
+    {
+      "id": "tx-8",
+      "title": "Snapp / Tapsi Rides & Fuel (اسنپ و بنزین)",
+      "amount": 320000,
+      "type": "EXPENSE",
+      "category": "Travel & Transport",
+      "paidBy": "partner_a",
+      "date": "2026-07-16",
+      "vendor": "Snapp / Gas Station",
+      "notes": "Commute and vehicle gas refill",
+      "createdAt": "2026-07-23T11:20:53.744Z"
+    }
+  ],
+  "budgets": [
+    {
+      "category": "Groceries",
+      "monthlyLimit": 15000000
+    },
+    {
+      "category": "Dining & Takeout",
+      "monthlyLimit": 6000000
+    },
+    {
+      "category": "Rent & Mortgage",
+      "monthlyLimit": 35000000
+    },
+    {
+      "category": "Utilities & Internet",
+      "monthlyLimit": 2500000
+    },
+    {
+      "category": "Entertainment & Subscriptions",
+      "monthlyLimit": 3000000
+    },
+    {
+      "category": "Travel & Transport",
+      "monthlyLimit": 4000000
+    },
+    {
+      "category": "Household & Supplies",
+      "monthlyLimit": 5000000
+    },
+    {
+      "category": "Shopping & Personal",
+      "monthlyLimit": 7000000
+    },
+    {
+      "category": "Healthcare & Wellness",
+      "monthlyLimit": 4000000
+    }
+  ],
+  "bills": [
+    {
+      "id": "bill-1",
+      "title": "Apartment Rent (اجاره مسکن)",
+      "amount": 35000000,
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "dueDateDay": 1,
+      "isPaidThisMonth": true,
+      "autopay": true,
+      "provider": "Home Landlord"
+    },
+    {
+      "id": "bill-2",
+      "title": "Electric & Gas Bill (قبوض آب، برق و گاز)",
+      "amount": 450000,
+      "category": "Utilities & Internet",
+      "paidBy": "partner_b",
+      "dueDateDay": 15,
+      "isPaidThisMonth": true,
+      "autopay": false,
+      "provider": "City Power & Gas"
+    },
+    {
+      "id": "bill-3",
+      "title": "High-Speed Fibre Internet (اینترنت پرسرعت)",
+      "amount": 380000,
+      "category": "Utilities & Internet",
+      "paidBy": "partner_a",
+      "dueDateDay": 20,
+      "isPaidThisMonth": false,
+      "autopay": true,
+      "provider": "Shatel / Irancell"
+    },
+    {
+      "id": "bill-4",
+      "title": "Filimo & Music Subscriptions (اشتراک فیلیمو)",
+      "amount": 250000,
+      "category": "Entertainment & Subscriptions",
+      "paidBy": "partner_b",
+      "dueDateDay": 25,
+      "isPaidThisMonth": false,
+      "autopay": true,
+      "provider": "Filimo & Media"
+    }
+  ],
+  "recurringExpenses": [
+    {
+      "id": "rec-1",
+      "title": "Apartment Monthly Rent (اجاره مسکن)",
+      "amount": 35000000,
+      "category": "Rent & Mortgage",
+      "paidBy": "partner_a",
+      "startDate": "2026-01-01",
+      "interval": "MONTHLY",
+      "isActive": true,
+      "notes": "Direct landlord transfer"
+    },
+    {
+      "id": "rec-2",
+      "title": "Fibre Optic Internet (اینترنت ثابت شاتل)",
+      "amount": 380000,
+      "category": "Utilities & Internet",
+      "paidBy": "partner_a",
+      "startDate": "2026-01-01",
+      "interval": "MONTHLY",
+      "isActive": true,
+      "notes": "High speed fibre connection"
+    },
+    {
+      "id": "rec-3",
+      "title": "Filimo & VOD Subscriptions (اشتراک فیلیمو)",
+      "amount": 250000,
+      "category": "Entertainment & Subscriptions",
+      "paidBy": "partner_b",
+      "startDate": "2026-01-01",
+      "interval": "MONTHLY",
+      "isActive": true,
+      "notes": "Monthly streaming service"
+    }
+  ]
+}
