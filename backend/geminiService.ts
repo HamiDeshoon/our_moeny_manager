@@ -10,11 +10,19 @@ function getGeminiClient(customKey?: string) {
   const settingsKey = db.getSettings()?.geminiApiKey;
   const rawKey = (customKey && customKey.trim()) || (settingsKey && settingsKey.trim()) || process.env.GEMINI_API_KEY || '';
   const apiKey = rawKey.trim().replace(/^["']|["']$/g, '');
+
   if (!apiKey) {
     throw new Error(
       'کلید API جمینای تنظیم نشده است. لطفا کلید خود را در قسمت تنظیمات (Settings) وارد کرده و ذخیره کنید.'
     );
   }
+
+  if (!apiKey.startsWith('AIzaSy')) {
+    throw new Error(
+      'فرمت کلید API اشتباه است. کلید معتبر Gemini API همیشه با عبارت "AIzaSy" شروع می‌شود (توکن‌های session مرورگر یا OAuth قابل استفاده نیستند). لطفاً کلید جدید را از aistudio.google.com/app/apikey دریافت کنید.'
+    );
+  }
+
   return new GoogleGenAI({ apiKey });
 }
 
@@ -96,9 +104,16 @@ async function callGeminiWithRetry<T>(
       console.error(
         `[${label}] Attempt ${attempt}/${maxRetries} — error: ${errMsg}`
       );
-      if (errMsg.includes('403') || errMsg.includes('401') || errMsg.includes('API key') || errMsg.includes('Forbidden')) {
+      if (
+        errMsg.includes('403') ||
+        errMsg.includes('401') ||
+        errMsg.includes('API key') ||
+        errMsg.includes('Forbidden') ||
+        errMsg.includes('UNAUTHENTICATED') ||
+        errMsg.includes('ACCESS_TOKEN_TYPE_UNSUPPORTED')
+      ) {
         throw new Error(
-          'کلید API نامعتبر است یا دسترسی آن مسدود شده است (403 Forbidden). لطفا یک کلید جدید که با AIzaSy شروع می‌شود از Google AI Studio دریافت کنید.'
+          'کلید API معتبر نیست (ارور ۴۰۱/۴۰۳). کلید معتبر Gemini همیشه با "AIzaSy" شروع می‌شود. لطفاً از لینک aistudio.google.com/app/apikey کلید جدید دریافت کرده و در تنظیمات وارد کنید.'
         );
       }
     }
