@@ -170,15 +170,15 @@ export default function App() {
   const activeSettings = settings || DEFAULT_SETTINGS;
   const activeSummary = summary || DEFAULT_SUMMARY;
 
-  if (isLoading && !settings) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-100 font-vazirmatn">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <h2 className="text-base font-bold tracking-tight text-slate-100">در حال بارگذاری DuoSpend...</h2>
-        <p className="text-xs text-slate-400 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
-      </div>
-    );
-  }
+if (isLoading && !settings) {
+     return (
+       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-4 text-slate-100 font-vazirmatn">
+         <div className="w-14 h-14 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4 bg-slate-800/50 p-1" />
+         <h2 className="text-base font-bold tracking-tight text-slate-100">در حال بارگذاری DuoSpend...</h2>
+         <p className="text-xs text-slate-400 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
+       </div>
+     );
+   }
 
   if (loadError && !settings) {
     return (
