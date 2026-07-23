@@ -1,0 +1,6 @@
+{
+  "name": "DuoSpend - Household Expense & Splitter",
+  "description": "Shared household expense tracker and budget manager for couples with Gemini AI receipt scanning, voice entry, and automated split balance settlements.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
