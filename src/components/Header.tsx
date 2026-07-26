@@ -255,13 +255,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Mic className="w-4 h-4" />
             </button>
-            <button
-              onClick={onOpenAddExpense}
-              className="p-1.5 sm:p-2 bg-indigo-600 text-white rounded-md cursor-pointer"
-              title="Add Expense"
-            >
-              <PlusCircle className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React from 'react';
-import { Camera, FileSpreadsheet, Download, ChevronLeft } from 'lucide-react';
+import { Camera, FileSpreadsheet, Download, ChevronLeft, PlusCircle } from 'lucide-react';
 import { AppSettings } from '../types';
 
 interface DataToolsPanelProps {
+  onOpenAddExpense: () => void;
   onOpenCSVImport: () => void;
   onOpenReceiptModal: () => void;
   onExportCSV: () => void;
@@ -10,6 +11,7 @@ interface DataToolsPanelProps {
 }
 
 export const DataToolsPanel: React.FC<DataToolsPanelProps> = ({
+  onOpenAddExpense,
   onOpenCSVImport,
   onOpenReceiptModal,
   onExportCSV,
@@ -72,6 +74,23 @@ export const DataToolsPanel: React.FC<DataToolsPanelProps> = ({
             </h3>
             <p className="text-xs text-zinc-500 leading-relaxed">
               دانلود تراکنش‌های ماه جاری به صورت فایل اکسل (CSV) برای استفاده در نرم‌افزارهای دیگر.
+            </p>
+          </button>
+
+          {/* Manual Entry */}
+          <button
+            onClick={onOpenAddExpense}
+            className="flex flex-col text-right items-start p-5 bg-black/40 hover:bg-indigo-600/10 border border-white/10 hover:border-indigo-600/30 rounded-xl transition-all group cursor-pointer"
+          >
+            <div className="p-3 bg-indigo-600 text-white rounded-lg mb-4 group-hover:scale-110 transition-transform shadow-lg shadow-indigo-600/20">
+              <PlusCircle className="w-6 h-6" />
+            </div>
+            <h3 className="font-bold text-zinc-100 mb-1 flex items-center justify-between w-full">
+              ثبت دستی تراکنش
+              <ChevronLeft className="w-4 h-4 text-zinc-600 group-hover:text-indigo-400 transition-colors" />
+            </h3>
+            <p className="text-xs text-zinc-500 leading-relaxed">
+              ثبت دستی تراکنش جدید از طریق فرم اطلاعات بدون استفاده از هوش مصنوعی.
             </p>
           </button>
         </div>

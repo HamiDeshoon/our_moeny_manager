@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Mic, Sparkles, Send, CheckCircle2, AlertCircle, RefreshCw, Languages } from 'lucide-react';
 import { api } from '../services/api';
 import { AIParsedVoice, AppSettings, Transaction } from '../types';
@@ -30,50 +30,81 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   const [editableAmount, setEditableAmount] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
 
-  const handleToggleListening = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Speech Recognition is not supported by this browser. You can type your voice memo directly!');
-      return;
-    }
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
+  const handleToggleListening = async () => {
     if (isListening) {
-      setIsListening(false);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
       return;
     }
 
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = speechLang;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setError('مرورگر شما از ضبط صدا پشتیبانی نمی‌کند. لطفا متن را تایپ کنید.');
+        return;
+      }
 
-      recognition.onstart = () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const options = MediaRecorder.isTypeSupported('audio/webm')
+        ? { mimeType: 'audio/webm' }
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? { mimeType: 'audio/mp4' }
+        : undefined;
+
+      const recorder = new MediaRecorder(stream, options);
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstart = () => {
         setIsListening(true);
         setError(null);
+        setTranscript('در حال ضبط صدا... (برای پایان، دوباره روی میکروفون بزنید)');
       };
 
-      recognition.onresult = (event: any) => {
-        let currentText = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          currentText += event.results[i][0].transcript;
-        }
-        setTranscript(currentText);
-      };
-
-      recognition.onerror = (err: any) => {
-        console.error('Speech recognition error:', err);
+      recorder.onstop = () => {
         setIsListening(false);
+        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        stream.getTracks().forEach((track) => track.stop());
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64data = reader.result as string;
+          handleParseAudio(base64data, recorder.mimeType || 'audio/webm');
+        };
+        reader.readAsDataURL(audioBlob);
       };
 
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
+      recorder.start();
+      mediaRecorderRef.current = recorder;
     } catch (err: any) {
-      console.error('Error starting speech recognition:', err);
+      console.error('Error starting audio recording:', err);
+      setError('دسترسی به میکروفون داده نشده یا خطایی رخ داد.');
       setIsListening(false);
+    }
+  };
+
+  const handleParseAudio = async (base64data: string, mimeType: string) => {
+    setIsProcessing(true);
+    setError(null);
+    setParsedResult(null);
+
+    try {
+      const result = await api.parseVoice({ audioBase64: base64data, mimeType });
+      setParsedResult(result);
+      setEditableAmount(result.amount || result.monthlyLimit || 0);
+      setTranscript(`(صدا با موفقیت پردازش شد)`);
+    } catch (err: any) {
+      console.error('Error parsing audio voice:', err);
+      setError(err.message || 'Gemini failed to parse voice audio. Check your API key in Settings.');
+      setTranscript('');
+    } finally {
+      setIsProcessing(false);
     }
   };
 

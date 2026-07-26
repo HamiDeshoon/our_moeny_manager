@@ -27,10 +27,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleQuickSelect = (userKey: 'hamid' | 'fati') => {
     if (userKey === 'hamid') {
       setUsername('hamid');
-      setPassword('19981998');
     } else {
       setUsername('fati');
-      setPassword('13771377');
     }
     setErrorMsg(null);
   };
@@ -87,7 +85,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xl">👨‍💼</span>
                 <div>
-                  <div className="text-xs font-bold text-zinc-200">سیدحمید عقل مندصرمی</div>
+                  <div className="text-xs font-bold text-zinc-200">کاربر اول</div>
                   <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>
@@ -106,7 +104,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-xl">👩‍⚕️</span>
                 <div>
-                  <div className="text-xs font-bold text-zinc-200">فاطمه نیک سرشت</div>
+                  <div className="text-xs font-bold text-zinc-200">کاربر دوم</div>
                   <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>

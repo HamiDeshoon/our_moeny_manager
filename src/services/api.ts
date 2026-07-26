@@ -306,10 +306,13 @@ export const api = {
     ),
 
   // Gemini AI Features — fall back to direct browser Gemini calls.
-  parseVoice: (transcript: string) =>
+  parseVoice: (input: string | { audioBase64: string; mimeType: string }) =>
     withOfflineFallback(
-      () => fetchJSON<AIParsedVoice>('/ai/parse-voice', { method: 'POST', body: JSON.stringify({ transcript }) }),
-      () => parseVoiceOffline(transcript, offlineDb.getSettings()),
+      () => fetchJSON<AIParsedVoice>('/ai/parse-voice', { 
+        method: 'POST', 
+        body: JSON.stringify(typeof input === 'string' ? { transcript: input } : input) 
+      }),
+      () => parseVoiceOffline(input, offlineDb.getSettings()),
     ),
   scanReceipt: (imageBase64: string, mimeType: string) =>
     withOfflineFallback(

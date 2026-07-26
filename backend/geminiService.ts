@@ -220,8 +220,8 @@ CLEANED TRANSCRIPT: "${cleanedTranscript}"
 CONTEXT:
 - Today's date is: ${todayStr}
 - Target Currency: "${currencySymbol}"
-- Partner A: ${partnerA.name} / "حمید" / "Hamid" (id: ${partnerA.id})
-- Partner B: ${partnerB.name} / "فاطمه" / "Fatemeh" (id: ${partnerB.id})
+- Partner A: ${partnerA.name} (id: ${partnerA.id})
+- Partner B: ${partnerB.name} (id: ${partnerB.id})
 
 INTENT CLASSIFICATION RULES (actionType):
 1. 'LOG_EXPENSE': One-off transaction entry (e.g. "حمید ۳۵۰ هزار تومان خرید کرد").
@@ -231,19 +231,12 @@ INTENT CLASSIFICATION RULES (actionType):
 
 FARSI / ENGLISH MATCHING RULES:
 - Identify who paid:
-  - Match '${partnerA.id}' if transcript mentions "${partnerA.name}", "حمید", "Hamid", "پسر", "من".
-  - Match '${partnerB.id}' if transcript mentions "${partnerB.name}", "فاطمه", "Fatemeh", "خانم".
+  - Match '${partnerA.id}' if transcript mentions "${partnerA.name}", "من".
+  - Match '${partnerB.id}' if transcript mentions "${partnerB.name}", "خانم", "همسرم".
   - Default to '${partnerA.id}' if unspecified.
-
-- Amount & Currency Rules:
-  - Extract numeric monetary amount in Target Currency "${currencySymbol}".
-  - PERSIAN VERBAL CONVERSIONS: "هزار" = 1,000 | "میلیون" = 1,000,000.
-  - If in Rials (ریال), convert to Tomans by DIVIDING BY 10.
-
-- Categories:
-  Groceries, Dining & Takeout, Rent & Mortgage, Utilities & Internet, Household & Supplies,
-  Entertainment & Subscriptions, Travel & Transport, Healthcare & Wellness, Shopping & Personal,
-  Income & Salary, Internal Transfer, Other.
+  - "هزار"=1,000 | "میلیون"=1,000,000. If Rials, divide by 10.
+  - CRITICAL: In Iran, small numbers like "500" or "300" (e.g. "500 toman") almost ALWAYS mean "500,000 toman". If the spoken amount is less than 10,000 without a unit (or just "toman"), MULTIPLY IT BY 1000. Example: "500" -> 500000. "350" -> 350000.
+  - Categories: Groceries, Dining & Takeout, Rent & Mortgage, Utilities & Internet, Household & Supplies, Entertainment & Subscriptions, Travel & Transport, Healthcare & Wellness, Shopping & Personal, Income & Salary, Internal Transfer, Other.
 
 Output valid JSON matching the schema.
 `;
@@ -463,10 +456,10 @@ RULES:
 2. Target currency: "${currencySymbol}".
    - If input values are in Rials, DIVIDE BY 10 to output Tomans.
    - Convert Farsi/Arabic digits and terms like "هزار" (x1000) or "میلیون" (x1000000).
-3. Identify who paid:
-   - Match '${partnerA.id}' for "${partnerA.name}", "حمید", "Hamid".
-   - Match '${partnerB.id}' for "${partnerB.name}", "فاطمه", "Fatemeh", "Fati".
-   - Default to '${partnerA.id}' if unclear.
+3. Identify who paid: 
+   - Match '${partnerA.id}' for "${partnerA.name}".
+   - Match '${partnerB.id}' for "${partnerB.name}".
+   - Default '${partnerA.id}'. if unclear.
 4. Normalize Date: YYYY-MM-DD. Convert Jalali dates if present. Default: ${todayStr}.
 5. Card-to-Card Transfers: Set type='TRANSFER', category='Internal Transfer'.
 6. Categorize accurately using standard categories.

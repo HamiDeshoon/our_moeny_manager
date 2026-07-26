@@ -17,7 +17,7 @@ apiRouter.post('/auth/login', (req, res) => {
         success: true,
         user: {
           username: 'hamid',
-          name: 'حمید',
+          name: 'کاربر اول',
           partnerId: 'partner_a',
           avatar: '👨‍💼',
         },
@@ -29,7 +29,7 @@ apiRouter.post('/auth/login', (req, res) => {
         success: true,
         user: {
           username: 'fati',
-          name: 'فاطی',
+          name: 'کاربر دوم',
           partnerId: 'partner_b',
           avatar: '👩‍⚕️',
         },

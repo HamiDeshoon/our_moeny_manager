@@ -162,27 +162,26 @@ function validateSheet(data: AIParsedSheetResult): string | null {
 // ──────────────────────────────────────────────
 
 export async function parseVoiceOffline(
-  transcript: string,
+  input: string | { audioBase64: string; mimeType: string },
   settings: AppSettings,
 ): Promise<AIParsedVoice> {
   const { ai } = getClient();
   const todayStr = new Date().toISOString().split('T')[0];
-  const cleaned = normalizePersianInput(transcript);
+  const isAudio = typeof input !== 'string';
+  const cleaned = isAudio ? '' : normalizePersianInput(input as string);
   const partnerA = settings.partnerA;
   const partnerB = settings.partnerB;
   const currency = settings.currencySymbol || 'تومان';
 
-  const prompt = `You are an intelligent household expense & budget assistant fluent in both PERSIAN (Farsi) and ENGLISH for a couple (${partnerA.name} [id: ${partnerA.id}] and ${partnerB.name} [id: ${partnerB.id}]).
-Analyze the input memo and detect the user's INTENTION (actionType):
-
-ORIGINAL INPUT: "${transcript}"
-CLEANED TRANSCRIPT: "${cleaned}"
+  const promptText = `You are an intelligent household expense & budget assistant fluent in both PERSIAN (Farsi) and ENGLISH for a couple.
+Analyze the user's INTENTION (actionType) from the provided input.
+${isAudio ? 'The user has provided an audio recording of their voice.' : `ORIGINAL INPUT: "${input}"\nCLEANED TRANSCRIPT: "${cleaned}"`}
 
 CONTEXT:
 - Today's date is: ${todayStr}
 - Target Currency: "${currency}"
-- Partner A: ${partnerA.name} / "حمید" / "Hamid" (id: ${partnerA.id})
-- Partner B: ${partnerB.name} / "فاطمه" / "Fatemeh" (id: ${partnerB.id})
+- Partner A: ${partnerA.name} (id: ${partnerA.id})
+- Partner B: ${partnerB.name} (id: ${partnerB.id})
 
 INTENT CLASSIFICATION RULES (actionType):
 1. 'LOG_EXPENSE': One-off transaction entry.
@@ -191,10 +190,11 @@ INTENT CLASSIFICATION RULES (actionType):
 4. 'ADD_BILL': Add a monthly recurring bill reminder.
 
 MATCHING RULES:
-- Match '${partnerA.id}' for "${partnerA.name}", "حمید", "Hamid", "من".
-- Match '${partnerB.id}' for "${partnerB.name}", "فاطمه", "Fatemeh", "خانم".
+- Match '${partnerA.id}' for "${partnerA.name}", "من".
+- Match '${partnerB.id}' for "${partnerB.name}", "خانم", "همسرم".
 - Default to '${partnerA.id}' if unspecified.
 - "هزار"=1,000 | "میلیون"=1,000,000. If Rials, divide by 10.
+- CRITICAL: In Iran, small numbers like "500" or "300" (e.g. "500 toman") almost ALWAYS mean "500,000 toman". If the spoken amount is less than 10,000 without a unit (or just "toman"), MULTIPLY IT BY 1000. Example: "500" -> 500000. "350" -> 350000.
 - Categories: Groceries, Dining & Takeout, Rent & Mortgage, Utilities & Internet, Household & Supplies, Entertainment & Subscriptions, Travel & Transport, Healthcare & Wellness, Shopping & Personal, Income & Salary, Internal Transfer, Other.
 
 Output valid JSON matching the schema.`;
@@ -220,9 +220,15 @@ Output valid JSON matching the schema.`;
 
   return callWithRetry<AIParsedVoice>(
     async () => {
+      let contents: any = promptText;
+      if (isAudio) {
+        const audioData = input as { audioBase64: string; mimeType: string };
+        const cleanB64 = audioData.audioBase64.replace(/^data:audio\/\w+;base64,/, '').replace(/^data:video\/\w+;base64,/, '');
+        contents = { parts: [{ inlineData: { data: cleanB64, mimeType: audioData.mimeType } }, { text: promptText }] };
+      }
       const response = await ai.models.generateContent({
         model: MODEL,
-        contents: prompt,
+        contents,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
       const parsed = JSON.parse(response.text || '{}') as AIParsedVoice;
