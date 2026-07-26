@@ -188,7 +188,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   };
 
   const samplePrompts = [
-    `حمید ۳۵۰ هزار تومان خرید هایپراستار کرد`,
+    `۳۵۰ هزار تومان خرید هایپراستار کرد`,
     `سقف بودجه سوپرمارکت رو کن ۱۰ میلیون تومان`,
     `قبض اینترنت ماهانه پانزدهم ۲۰۰ هزار تومان اضافه کن`,
   ];
@@ -235,7 +235,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
         <div className="relative">
           <textarea
             rows={3}
-            placeholder='مثلاً: "حمید ۲۵۰ هزار تومان خرید هایپراستار کرد"'
+            placeholder='مثلاً: "۲۵۰ هزار تومان خرید هایپراستار کرد"'
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
             className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-12 text-zinc-100 placeholder-zinc-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"

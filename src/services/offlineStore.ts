@@ -640,23 +640,23 @@ export const offlineDb = {
     const cleanUser = (username || '').toString().trim().toLowerCase();
     const cleanPass = (password || '').toString().trim();
 
-    if (cleanUser === 'hamid' && cleanPass === '19981998') {
+    if (cleanUser === 'user1' && cleanPass === 'password123') {
       return {
         success: true,
         user: {
-          username: 'hamid',
-          name: 'حمید',
+          username: 'user1',
+          name: 'کاربر اول',
           partnerId: 'partner_a',
           avatar: '👨‍💼',
         },
       };
     }
-    if ((cleanUser === 'fati' || cleanUser === 'fatemeh') && cleanPass === '13771377') {
+    if (cleanUser === 'user2' && cleanPass === 'password456') {
       return {
         success: true,
         user: {
-          username: 'fati',
-          name: 'فاطی',
+          username: 'user2',
+          name: 'کاربر دوم',
           partnerId: 'partner_b',
           avatar: '👩‍⚕️',
         },

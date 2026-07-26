@@ -4,13 +4,13 @@
     "currencySymbol": "تومان",
     "partnerA": {
       "id": "partner_a",
-      "name": "سیدحمید عقل مندصرمی",
+      "name": "کاربر اول",
       "avatar": "👨‍💼",
       "color": "#0284c7"
     },
     "partnerB": {
       "id": "partner_b",
-      "name": "فاطمه نیک سرشت",
+      "name": "کاربر دوم",
       "avatar": "👩‍⚕️",
       "color": "#16a34a"
     },

@@ -224,7 +224,7 @@ CONTEXT:
 - Partner B: ${partnerB.name} (id: ${partnerB.id})
 
 INTENT CLASSIFICATION RULES (actionType):
-1. 'LOG_EXPENSE': One-off transaction entry (e.g. "حمید ۳۵۰ هزار تومان خرید کرد").
+1. 'LOG_EXPENSE': One-off transaction entry (e.g. "۳۵۰ هزار تومان خرید شد").
 2. 'SET_BUDGET': User wants to change or set a monthly budget limit (e.g. "بودجه سوپرمارکت رو کن ۱۰ میلیون تومان", "set groceries budget to 500").
 3. 'ADD_RECURRING': User wants to set up a regular recurring expense rule (e.g. "هر ماه ۱۵ میلیون اجاره اضافه کن", "recurring rent 1000 every month").
 4. 'ADD_BILL': User wants to add a monthly recurring bill reminder (e.g. "قبض اینترنت ماهانه سی‌ام ۲۰۰ هزار تومان", "add internet bill due 25th").

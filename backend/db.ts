@@ -292,10 +292,10 @@ class Database {
   // --- SETTINGS ---
   getSettings(): AppSettings {
     if (!this.data.settings.partnerA.name) {
-      this.data.settings.partnerA.name = 'حمید';
+      this.data.settings.partnerA.name = 'کاربر اول';
     }
     if (!this.data.settings.partnerB.name) {
-      this.data.settings.partnerB.name = 'فاطی';
+      this.data.settings.partnerB.name = 'کاربر دوم';
     }
     return this.data.settings;
   }

@@ -408,7 +408,7 @@ ${contentToAnalyze.substring(0, 15000)}
 RULES:
 1. Identify all valid transaction rows. Skip headers, totals, or empty rows.
 2. Target currency: "${currency}". If Rials, divide by 10. Convert "هزار"/"میلیون".
-3. Identify who paid: '${partnerA.id}' for "${partnerA.name}"/"حمید"; '${partnerB.id}' for "${partnerB.name}"/"فاطمه"/"Fati". Default '${partnerA.id}'.
+3. Identify who paid: '${partnerA.id}' for "${partnerA.name}"; '${partnerB.id}' for "${partnerB.name}". Default '${partnerA.id}'.
 4. Normalize Date: YYYY-MM-DD. Convert Jalali dates if present. Default: ${todayStr}.
 5. Card-to-Card Transfers: type='TRANSFER', category='Internal Transfer'.
 6. Categorize accurately.
