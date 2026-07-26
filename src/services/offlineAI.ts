@@ -26,10 +26,11 @@ const MODEL = 'gemini-3.5-flash-lite';
 
 function getKey(): string {
   try {
-    const raw = localStorage.getItem('duospend_gemini_key') || '';
+    const raw = localStorage.getItem('duospend_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
     return raw.trim().replace(/^["']|["']$/g, '');
   } catch {
-    return '';
+    const fallback = import.meta.env.VITE_GEMINI_API_KEY || '';
+    return fallback.trim().replace(/^["']|["']$/g, '');
   }
 }
 

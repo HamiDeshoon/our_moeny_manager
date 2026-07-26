@@ -26,9 +26,9 @@ const API_BASE = '/api';
 // Helper to retrieve custom API Key saved in LocalStorage if user set one in UI Settings
 export function getSavedCustomApiKey(): string {
   try {
-    return localStorage.getItem('duospend_gemini_key') || '';
+    return localStorage.getItem('duospend_gemini_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
   } catch {
-    return '';
+    return import.meta.env.VITE_GEMINI_API_KEY || '';
   }
 }
 

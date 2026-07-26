@@ -231,6 +231,20 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile Quick Add Buttons */}
           <div className="flex lg:hidden items-center space-x-1 sm:space-x-1.5 rtl:space-x-reverse pl-2 sm:pl-3 rtl:pl-0 rtl:pr-2 sm:rtl:pr-3 border-l rtl:border-l-0 rtl:border-r border-white/10 py-2 shrink-0">
             <button
+              onClick={onOpenCSVImport}
+              className="p-1.5 sm:p-2 bg-zinc-800 text-emerald-400 rounded-md border border-zinc-700 cursor-pointer"
+              title="Import CSV"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onExportCSV}
+              className="p-1.5 sm:p-2 bg-zinc-800 text-zinc-400 rounded-md border border-zinc-700 cursor-pointer"
+              title="Export CSV"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
               onClick={onOpenVoiceModal}
               className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20 cursor-pointer"
               title="Voice Memo"
