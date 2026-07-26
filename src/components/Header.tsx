@@ -15,8 +15,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   currentUser: AuthUser | null;
   onOpenLogin: () => void;
-  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights';
-  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights') => void;
+  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools';
+  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -226,23 +226,27 @@ export const Header: React.FC<HeaderProps> = ({
               <Sparkles className="w-3.5 h-3.5" />
               <span>AI Advisor</span>
             </button>
+            <button
+              onClick={() => onTabChange('tools')}
+              className={`px-3 sm:px-3.5 py-1.5 rounded-md font-medium whitespace-nowrap transition flex items-center space-x-1.5 rtl:space-x-reverse cursor-pointer ${
+                activeTab === 'tools'
+                  ? 'bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20'
+                  : 'text-zinc-400 hover:text-emerald-400 hover:bg-white/5'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>ابزارها و ورود اطلاعات</span>
+            </button>
           </div>
 
           {/* Mobile Quick Add Buttons */}
           <div className="flex lg:hidden items-center space-x-1 sm:space-x-1.5 rtl:space-x-reverse pl-2 sm:pl-3 rtl:pl-0 rtl:pr-2 sm:rtl:pr-3 border-l rtl:border-l-0 rtl:border-r border-white/10 py-2 shrink-0">
             <button
-              onClick={onOpenCSVImport}
-              className="p-1.5 sm:p-2 bg-zinc-800 text-emerald-400 rounded-md border border-zinc-700 cursor-pointer"
-              title="Import CSV"
+              onClick={onOpenSettings}
+              className="p-1.5 sm:p-2 bg-black/40 text-zinc-400 hover:text-zinc-200 rounded-md border border-white/10 cursor-pointer"
+              title="Settings"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onExportCSV}
-              className="p-1.5 sm:p-2 bg-zinc-800 text-zinc-400 rounded-md border border-zinc-700 cursor-pointer"
-              title="Export CSV"
-            >
-              <Download className="w-4 h-4" />
+              <Settings className="w-4 h-4" />
             </button>
             <button
               onClick={onOpenVoiceModal}
@@ -250,13 +254,6 @@ export const Header: React.FC<HeaderProps> = ({
               title="Voice Memo"
             >
               <Mic className="w-4 h-4" />
-            </button>
-            <button
-              onClick={onOpenReceiptModal}
-              className="p-1.5 sm:p-2 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20 cursor-pointer"
-              title="Scan Receipt"
-            >
-              <Camera className="w-4 h-4" />
             </button>
             <button
               onClick={onOpenAddExpense}

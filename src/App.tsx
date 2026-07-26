@@ -15,6 +15,7 @@ const AnalyticsCharts = lazy(() => import('./components/AnalyticsCharts').then(m
 const BudgetPlanner = lazy(() => import('./components/BudgetPlanner').then(m => ({ default: m.BudgetPlanner })));
 const BillTracker = lazy(() => import('./components/BillTracker').then(m => ({ default: m.BillTracker })));
 const AIAdvisor = lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
+const DataToolsPanel = lazy(() => import('./components/DataToolsPanel').then(m => ({ default: m.DataToolsPanel })));
 
 // Lazy load Modals
 const TransactionForm = lazy(() => import('./components/TransactionForm').then(m => ({ default: m.TransactionForm })));
@@ -59,7 +60,7 @@ export default function App() {
     return `${startDate}..${endDate}`;
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools'>('dashboard');
 
   // Auth User State
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -350,6 +351,23 @@ export default function App() {
             >
               <AIAdvisor
                 selectedMonth={selectedMonth}
+                settings={activeSettings}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === 'tools' && (
+            <motion.div
+              key="tools"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <DataToolsPanel
+                onOpenCSVImport={() => setIsCSVImportOpen(true)}
+                onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
+                onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)}
                 settings={activeSettings}
               />
             </motion.div>
