@@ -18,13 +18,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   currencySymbol: 'تومان',
   partnerA: {
     id: 'partner_a',
-    name: 'سیدحمید عقل مندصرمی',
+    name: 'حمید',
     avatar: '👨‍💼',
     color: '#0284c7', // Sky blue
   },
   partnerB: {
     id: 'partner_b',
-    name: 'فاطمه نیک سرشت',
+    name: 'فاطی',
     avatar: '👩‍⚕️',
     color: '#16a34a', // Emerald green
   },
@@ -291,11 +291,11 @@ class Database {
 
   // --- SETTINGS ---
   getSettings(): AppSettings {
-    if (!this.data.settings.partnerA.name || this.data.settings.partnerA.name === 'Hamid') {
-      this.data.settings.partnerA.name = 'سیدحمید عقل مندصرمی';
+    if (!this.data.settings.partnerA.name) {
+      this.data.settings.partnerA.name = 'حمید';
     }
-    if (!this.data.settings.partnerB.name || this.data.settings.partnerB.name === 'Fatemeh' || this.data.settings.partnerB.name === 'Fati') {
-      this.data.settings.partnerB.name = 'فاطمه نیک سرشت';
+    if (!this.data.settings.partnerB.name) {
+      this.data.settings.partnerB.name = 'فاطی';
     }
     return this.data.settings;
   }

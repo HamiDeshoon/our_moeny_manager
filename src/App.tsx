@@ -29,13 +29,13 @@ const DEFAULT_SETTINGS: AppSettings = {
   currencySymbol: 'تومان',
   partnerA: {
     id: 'partner_a',
-    name: 'سیدحمید عقل مندصرمی',
+    name: 'حمید',
     avatar: '👨‍💼',
     color: '#0284c7',
   },
   partnerB: {
     id: 'partner_b',
-    name: 'فاطمه نیک سرشت',
+    name: 'فاطی',
     avatar: '👩‍⚕️',
     color: '#16a34a',
   },
