@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Target, AlertTriangle, CheckCircle2, Edit2, Save, Repeat, Plus, Trash2, Calendar, Power } from 'lucide-react';
+import { Target, AlertTriangle, CheckCircle2, Edit2, Save, Repeat, Plus, Trash2, Calendar, Power, Receipt } from 'lucide-react';
 import { AppSettings, Budget, Category, RecurringExpense, Transaction } from '../types';
 import { formatMoney } from '../utils/formatters';
 import { api } from '../services/api';
+import { EmptyState } from './EmptyState';
 
 interface BudgetPlannerProps {
   budgets: Budget[];
@@ -168,41 +169,41 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
   };
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm space-y-6">
+    <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 sm:p-6 shadow-sm space-y-6">
       {/* Tab Header Selector */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-white/10 gap-3">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-200">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
             <Target className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">Budget Planner & Recurring Expenses</h2>
-            <p className="text-xs text-slate-500">Target limits and automated recurring household costs</p>
+            <h2 className="text-base font-bold text-white">برنامه‌ریزی بودجه و هزینه‌های دوره‌ای</h2>
+            <p className="text-xs text-zinc-500 mt-1">مدیریت سقف هزینه‌ها و پرداخت‌های خودکار</p>
           </div>
         </div>
 
         {/* Sub-tab Navigation */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+        <div className="flex items-center gap-1.5 bg-black/20 p-1.5 rounded-xl border border-white/5">
           <button
             onClick={() => setActiveTab('targets')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition ${
+            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
               activeTab === 'targets'
-                ? 'bg-white text-indigo-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            Monthly Targets
+            بودجه ماهانه
           </button>
           <button
             onClick={() => setActiveTab('recurring')}
-            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition flex items-center space-x-1.5 ${
+            className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center space-x-1.5 ${
               activeTab === 'recurring'
-                ? 'bg-white text-indigo-700 shadow-2xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            <Repeat className="w-3.5 h-3.5" />
-            <span>Recurring ({recurringExpenses.length})</span>
+            <Repeat className="w-3.5 h-3.5 ml-1.5" />
+            <span>دوره‌ای ({recurringExpenses.length})</span>
           </button>
         </div>
       </div>
@@ -215,10 +216,10 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
               <button
                 onClick={handleSaveBudgets}
                 disabled={isSaving}
-                className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md shadow-emerald-100"
+                className="flex items-center space-x-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/20 text-xs font-bold px-4 py-2 rounded-xl transition"
               >
                 <Save className="w-3.5 h-3.5" />
-                <span>{isSaving ? 'Saving...' : 'Save Target Limits'}</span>
+                <span>{isSaving ? 'در حال ذخیره...' : 'ذخیره سقف بودجه'}</span>
               </button>
             ) : (
               <button
@@ -226,10 +227,10 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                   setEditedBudgets(budgets);
                   setIsEditing(true);
                 }}
-                className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 text-xs font-semibold px-4 py-2 rounded-xl border border-indigo-200 transition"
+                className="flex items-center space-x-1.5 bg-white/5 hover:bg-white/10 text-indigo-400 text-xs font-semibold px-4 py-2 rounded-xl border border-white/10 transition"
               >
                 <Edit2 className="w-3.5 h-3.5" />
-                <span>Edit Target Limits</span>
+                <span>ویرایش بودجه ماهانه</span>
               </button>
             )}
           </div>
@@ -245,34 +246,34 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                 <div
                   key={b.category}
                   className={`p-4 rounded-xl border transition ${
-                    isOver ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/60 border-slate-200'
+                    isOver ? 'bg-rose-500/5 border-rose-500/20' : 'bg-black/20 border-white/10'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-slate-900">{b.category}</span>
+                    <span className="text-xs font-bold text-white">{b.category}</span>
 
                     {isEditing ? (
                       <div className="flex items-center space-x-1 text-xs">
-                        <span className="text-slate-400">{symbol}</span>
+                        <span className="text-zinc-500 ml-2">{symbol}</span>
                         <input
                           type="number"
                           step="1000"
                           value={b.monthlyLimit}
                           onChange={(e) => handleLimitChange(b.category, e.target.value)}
-                          className="w-28 bg-white border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono text-xs focus:outline-none focus:border-indigo-600 shadow-2xs"
+                          className="w-28 bg-zinc-900 border border-white/10 rounded-lg px-2 py-1 text-white font-mono text-xs focus:outline-none focus:border-indigo-500"
                         />
                       </div>
                     ) : (
                       <div className="flex items-center space-x-1.5">
                         {isOver ? (
-                          <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full border border-rose-200">
-                            <AlertTriangle className="w-3 h-3" />
-                            <span>Over Budget</span>
+                          <span className="inline-flex items-center space-x-1 text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2.5 py-0.5 rounded-full border border-rose-500/20">
+                            <AlertTriangle className="w-3 h-3 ml-0.5" />
+                            <span>بیش از بودجه</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                            <CheckCircle2 className="w-3 h-3" />
-                            <span>On Track</span>
+                          <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                            <CheckCircle2 className="w-3 h-3 ml-0.5" />
+                            <span>در محدوده مجاز</span>
                           </span>
                         )}
                       </div>
@@ -280,16 +281,16 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                   </div>
 
                   <div className="mt-3">
-                    <div className="flex justify-between text-xs mb-1.5 font-mono">
-                      <span className={isOver ? 'text-rose-700 font-bold' : 'text-slate-800'}>
-                        {formatMoney(spent, symbol)} spent
+                    <div className="flex justify-between text-[11px] mb-1.5 font-mono">
+                      <span className={isOver ? 'text-rose-400 font-bold' : 'text-zinc-300'}>
+                        {formatMoney(spent, symbol)} مصرف شده
                       </span>
-                      <span className="text-slate-500">
-                        of {formatMoney(limit, symbol)} target ({pct}%)
+                      <span className="text-zinc-500">
+                        از {formatMoney(limit, symbol)} هدف ({pct}%)
                       </span>
                     </div>
 
-                    <div className="w-full h-2.5 bg-slate-200/80 rounded-full overflow-hidden">
+                    <div className="w-full h-2.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
                       <div
                         style={{ width: `${pct}%` }}
                         className={`h-full transition-all duration-500 rounded-full ${
@@ -310,72 +311,72 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
         <div className="space-y-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Automated Recurring Expenses (هزینه‌های دوره‌ای)
+              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                هزینه‌های دوره‌ای (Automated Recurring)
               </h3>
-              <p className="text-xs text-slate-500">Rent, internet, subscriptions & recurring bills</p>
+              <p className="text-[11px] text-zinc-500 mt-1">اجاره، اینترنت و سایر پرداختی‌های مکرر</p>
             </div>
 
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleProcessDueExpenses}
                 disabled={isProcessingDue}
-                className="flex items-center space-x-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer"
+                className="flex items-center space-x-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 text-xs font-bold px-3.5 py-2 rounded-xl transition cursor-pointer"
               >
                 <Repeat className="w-3.5 h-3.5" />
-                <span>{isProcessingDue ? 'Processing...' : 'Post Due Expenses for Current Month'}</span>
+                <span>{isProcessingDue ? 'در حال بررسی...' : 'ثبت هزینه‌های سررسید شده این ماه'}</span>
               </button>
 
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-md shadow-indigo-100 cursor-pointer"
+                className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-md shadow-indigo-500/20 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>New Recurring</span>
+                <span>هزینه دوره‌ای جدید</span>
               </button>
             </div>
           </div>
 
           {processStatus && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-xl text-xs font-bold">
+            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-bold">
               {processStatus}
             </div>
           )}
 
           {/* New Recurring Form */}
           {showAddForm && (
-            <form onSubmit={handleCreateRecurring} className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+            <form onSubmit={handleCreateRecurring} className="bg-black/20 border border-white/10 rounded-2xl p-4 space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Expense Title</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">عنوان هزینه</label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Monthly Rent / Shatel Internet"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-hidden"
+                    placeholder="مثلا: اجاره خانه"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Amount ({symbol})</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">مبلغ ({symbol})</label>
                   <input
                     type="number"
                     required
                     value={amount}
                     onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="e.g. 35000000"
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-hidden"
+                    placeholder="مبلغ به عدد"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Category</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">دسته‌بندی</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as Category)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c} value={c}>{c}</option>
@@ -384,11 +385,11 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Default Paid By</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">پرداخت کننده پیش‌فرض</label>
                   <select
                     value={paidBy}
                     onChange={(e) => setPaidBy(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                   >
                     <option value={settings.partnerA.id}>{settings.partnerA.name}</option>
                     <option value={settings.partnerB.id}>{settings.partnerB.name}</option>
@@ -396,26 +397,26 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Recurrence Interval</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">دوره تکرار</label>
                   <select
                     value={interval}
                     onChange={(e) => setInterval(e.target.value as any)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                   >
-                    <option value="MONTHLY">Monthly (ماهانه)</option>
-                    <option value="BI_MONTHLY">Bi-Monthly (هر دو ماه)</option>
-                    <option value="QUARTERLY">Quarterly (سه ماهه)</option>
-                    <option value="YEARLY">Yearly (سالانه)</option>
+                    <option value="MONTHLY">ماهانه</option>
+                    <option value="BI_MONTHLY">هر دو ماه</option>
+                    <option value="QUARTERLY">سه ماهه</option>
+                    <option value="YEARLY">سالانه</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Start Date</label>
+                  <label className="text-[10px] font-bold text-zinc-500 block mb-1">تاریخ شروع</label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-hidden"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -424,15 +425,15 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-3 py-1.5 rounded-xl text-slate-500 text-xs font-semibold hover:bg-slate-200"
+                  className="px-3 py-1.5 rounded-xl text-zinc-400 text-xs font-semibold hover:text-white"
                 >
-                  Cancel
+                  انصراف
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 shadow-sm"
+                  className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 shadow-sm"
                 >
-                  Save Recurring Rule
+                  ذخیره هزینه دوره‌ای
                 </button>
               </div>
             </form>
@@ -441,61 +442,67 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
           {/* List of Recurring Expenses */}
           <div className="space-y-3">
             {recurringExpenses.length === 0 ? (
-              <p className="text-xs text-slate-400 italic text-center py-6">No recurring expenses configured yet.</p>
+              <EmptyState 
+                icon={Receipt}
+                title="هیچ هزینه دوره‌ای ثبت نشده است"
+                description="می‌توانید پرداختی‌های ثابت مثل اجاره و قبوض را اینجا اضافه کنید تا خودکار ثبت شوند."
+              />
             ) : (
               recurringExpenses.map((rec) => {
                 const payer = rec.paidBy === settings.partnerA.id ? settings.partnerA : settings.partnerB;
                 return (
                   <div
                     key={rec.id}
-                    className={`p-4 rounded-xl border flex items-center justify-between transition ${
-                      rec.isActive ? 'bg-white border-slate-200 shadow-2xs' : 'bg-slate-50 border-slate-200 opacity-60'
+                    className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition ${
+                      rec.isActive ? 'bg-black/20 border-white/10' : 'bg-white/5 border-white/5 opacity-60'
                     }`}
                   >
                     <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-xs text-slate-900">{rec.title}</span>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="font-bold text-xs text-white ml-2">{rec.title}</span>
+                        <span className="text-[10px] bg-white/5 text-zinc-300 px-2 py-0.5 rounded-full font-semibold border border-white/10">
                           {rec.category}
                         </span>
-                        <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
+                        <span className="text-[10px] bg-indigo-500/10 text-indigo-400 font-bold px-2 py-0.5 rounded-full border border-indigo-500/20">
                           {rec.interval}
                         </span>
                       </div>
 
-                      <div className="flex items-center space-x-3 text-[11px] text-slate-500 font-mono">
-                        <span>Payer: <strong className="text-slate-800 font-sans">{payer.name}</strong></span>
-                        <span>•</span>
-                        <span>Start: {rec.startDate}</span>
+                      <div className="flex items-center space-x-3 text-[11px] text-zinc-500">
+                        <span>پرداخت‌کننده: <strong className="text-zinc-300 font-sans">{payer.name}</strong></span>
+                        <span className="text-zinc-600">•</span>
+                        <span>شروع: {rec.startDate}</span>
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-3">
-                      <span className="text-sm font-extrabold text-slate-900 font-mono">
+                    <div className="flex items-center justify-between w-full md:w-auto md:justify-end space-x-3">
+                      <span className="text-sm font-extrabold text-white font-mono ml-4">
                         {formatMoney(rec.amount, symbol)}
                       </span>
 
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(rec.id, rec.isActive)}
-                        title={rec.isActive ? 'Deactivate' : 'Activate'}
-                        className={`p-2 rounded-xl transition ${
-                          rec.isActive
-                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                            : 'bg-slate-200 text-slate-500 hover:bg-slate-300'
-                        }`}
-                      >
-                        <Power className="w-4 h-4" />
-                      </button>
+                      <div className="flex space-x-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(rec.id, rec.isActive)}
+                          title={rec.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
+                          className={`p-2 rounded-xl transition ${
+                            rec.isActive
+                              ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/20'
+                              : 'bg-white/5 text-zinc-500 hover:text-white border border-white/10'
+                          }`}
+                        >
+                          <Power className="w-4 h-4" />
+                        </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteRecurring(rec.id)}
-                        title="Delete"
-                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRecurring(rec.id)}
+                          title="حذف"
+                          className="p-2 text-rose-400 hover:bg-rose-500/10 rounded-xl transition border border-transparent hover:border-rose-500/20"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

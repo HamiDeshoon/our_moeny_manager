@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Calendar, Tag, User, Split, FileText, Store, ArrowRightLeft, TrendingUp, TrendingDown } from 'lucide-react';
+import { Calendar, Tag, User, Store, ArrowRightLeft, TrendingUp, TrendingDown, FileText } from 'lucide-react';
 import { AppSettings, Category, Transaction, TransactionType } from '../types';
+import { BottomSheet } from './ui/BottomSheet';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -57,7 +60,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       setIsRecurring(Boolean(initialData.isRecurring));
       setRecurringDay(initialData.recurringDay ? String(initialData.recurringDay) : '1');
     } else {
-      // Reset defaults
       setTxType('EXPENSE');
       setTitle('');
       setAmount('');
@@ -70,8 +72,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       setRecurringDay('1');
     }
   }, [initialData, isOpen, settings]);
-
-  if (!isOpen) return null;
 
   const numericAmount = parseFloat(amount) || 0;
 
@@ -104,270 +104,211 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
-          <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
-            <span>{initialData ? 'Edit Expense' : 'Log Household Expense'}</span>
-          </h2>
+    <BottomSheet isOpen={isOpen} onClose={onClose} title={initialData ? 'ویرایش تراکنش' : 'ثبت تراکنش جدید'}>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        {/* Type Selector */}
+        <div className="grid grid-cols-3 gap-2 p-1.5 bg-black/20 rounded-xl">
           <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-800 p-1 rounded-lg hover:bg-slate-100 transition"
+            type="button"
+            onClick={() => setTxType('EXPENSE')}
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
+              txType === 'EXPENSE'
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                : 'text-zinc-400 hover:text-white'
+            }`}
           >
-            <X className="w-5 h-5" />
+            <TrendingDown className="w-4 h-4 mb-1" />
+            <span>هزینه</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTxType('TRANSFER')}
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
+              txType === 'TRANSFER'
+                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <ArrowRightLeft className="w-4 h-4 mb-1" />
+            <span>انتقال</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTxType('INCOME')}
+            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition-all ${
+              txType === 'INCOME'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <TrendingUp className="w-4 h-4 mb-1" />
+            <span>درآمد</span>
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Transaction Type Selector */}
-          <div className="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-xl mb-4">
-            <button
-              type="button"
-              onClick={() => setTxType('EXPENSE')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
-                txType === 'EXPENSE'
-                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/50'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-              }`}
-            >
-              <TrendingDown className="w-4 h-4 mb-1" />
-              <span>Expense</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTxType('TRANSFER')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
-                txType === 'TRANSFER'
-                  ? 'bg-white text-amber-600 shadow-sm border border-slate-200/50'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-              }`}
-            >
-              <ArrowRightLeft className="w-4 h-4 mb-1" />
-              <span>Budget Transfer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTxType('INCOME')}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg text-xs font-semibold transition ${
-                txType === 'INCOME'
-                  ? 'bg-white text-emerald-600 shadow-sm border border-slate-200/50'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
-              }`}
-            >
-              <TrendingUp className="w-4 h-4 mb-1" />
-              <span>Income</span>
-            </button>
-          </div>
-
-          {/* Amount & Title */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-1">
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs font-semibold uppercase text-slate-500">
-                  Amount ({settings.currencySymbol})
-                </label>
-                {numericAmount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setAmount(String(Math.round(numericAmount / 10)))}
-                    className="text-[10px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-0.5 rounded-md transition cursor-pointer"
-                    title="Divide by 10 to convert Rial to Toman"
-                  >
-                    ✂️ ÷ ۱۰ (ریال ➔ تومان)
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-semibold text-xs">
-                  {settings.currencySymbol}
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-slate-900 font-bold text-lg focus:outline-none focus:border-indigo-600 shadow-2xs"
-                />
-              </div>
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1">
-                Title / Expense Name
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Trader Joe's Weekly Groceries"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 font-medium focus:outline-none focus:border-indigo-600 text-sm shadow-2xs"
-              />
-            </div>
-          </div>
-
-          {/* Paid By & Date */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center space-x-1">
-                <User className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Who Paid?</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPaidBy(settings.partnerA.id)}
-                  className={`flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border font-semibold text-xs transition ${
-                    paidBy === settings.partnerA.id
-                      ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{settings.partnerA.avatar}</span>
-                  <span>{settings.partnerA.name}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPaidBy(settings.partnerB.id)}
-                  className={`flex items-center justify-center space-x-2 py-2 px-3 rounded-xl border font-semibold text-xs transition ${
-                    paidBy === settings.partnerB.id
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{settings.partnerB.avatar}</span>
-                  <span>{settings.partnerB.name}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center space-x-1">
-                <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Date</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 shadow-2xs"
-              />
-            </div>
-          </div>
-
-          {/* Category & Vendor */}
-          {txType === 'EXPENSE' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center space-x-1">
-                  <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Category</span>
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as Category)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 shadow-2xs"
-                >
-                  {CATEGORIES.filter(c => c !== 'Internal Transfer' && c !== 'Income & Salary').map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center space-x-1">
-                  <Store className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Vendor / Merchant (Optional)</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Costco, Target"
-                  value={vendor}
-                  onChange={(e) => setVendor(e.target.value)}
-                  className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 shadow-2xs"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Notes */}
+        {/* Amount & Title */}
+        <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase text-slate-500 mb-1 flex items-center space-x-1">
-              <FileText className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Notes (Optional)</span>
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Split for dinner and drinks with friends"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm focus:outline-none focus:border-indigo-600 shadow-2xs"
-            />
-          </div>
-
-          {/* Monthly Recurring Expense Toggle */}
-          <div className="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2 text-xs font-bold text-indigo-950 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isRecurring}
-                  onChange={(e) => setIsRecurring(e.target.checked)}
-                  className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
-                />
-                <span>Set as Monthly Recurring Expense (تکرار ماهانه)</span>
-              </label>
-              {isRecurring && (
-                <span className="text-[10px] bg-indigo-200 text-indigo-900 font-bold px-2 py-0.5 rounded-full">
-                  Auto-generates Monthly
-                </span>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-zinc-300 ml-1">مبلغ ({settings.currencySymbol})</label>
+              {numericAmount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAmount(String(Math.round(numericAmount / 10)))}
+                  className="text-[10px] text-zinc-400 bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded transition"
+                >
+                  ÷۱۰ (تبدیل به تومان)
+                </button>
               )}
             </div>
-
-            {isRecurring && (
-              <div className="flex items-center space-x-3 text-xs text-indigo-900 pt-1 border-t border-indigo-100">
-                <span className="font-medium">Auto-generate on day of month:</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={recurringDay}
-                  onChange={(e) => setRecurringDay(e.target.value)}
-                  className="w-16 bg-white border border-indigo-200 rounded-lg px-2 py-1 font-mono font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-600"
-                />
-                <span className="text-[11px] text-indigo-700">
-                  (Day {recurringDay} of each month)
-                </span>
-              </div>
-            )}
+            <Input
+              type="number"
+              step="0.01"
+              required
+              placeholder="0.00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="font-mono text-lg font-bold"
+            />
           </div>
+          
+          <Input
+            label="عنوان تراکنش"
+            required
+            placeholder="مثلا خرید هایپراستار"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
+        </div>
 
-          {/* Submit */}
-          <div className="pt-2 flex items-center justify-end space-x-3">
+        {/* Paid By */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center gap-1.5">
+            <User className="w-4 h-4 text-indigo-400" />
+            پرداخت کننده
+          </label>
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-semibold hover:bg-slate-100 transition"
+              onClick={() => setPaidBy(settings.partnerA.id)}
+              className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                paidBy === settings.partnerA.id
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                  : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'
+              }`}
             >
-              Cancel
+              <span>{settings.partnerA.avatar}</span>
+              <span>{settings.partnerA.name}</span>
             </button>
             <button
-              type="submit"
-              disabled={isSubmitting || numericAmount <= 0}
-              className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition shadow-md shadow-indigo-100"
+              type="button"
+              onClick={() => setPaidBy(settings.partnerB.id)}
+              className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                paidBy === settings.partnerB.id
+                  ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300'
+                  : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10'
+              }`}
             >
-              {isSubmitting ? 'Saving...' : initialData ? 'Update Expense' : 'Save Expense'}
+              <span>{settings.partnerB.avatar}</span>
+              <span>{settings.partnerB.name}</span>
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        {/* Category & Date */}
+        <div className="grid grid-cols-2 gap-3">
+          {txType === 'EXPENSE' ? (
+            <div>
+              <label className="text-sm font-medium text-zinc-300 ml-1 mb-1 block flex items-center gap-1.5">
+                <Tag className="w-4 h-4 text-indigo-400" />
+                دسته‌بندی
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as Category)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl text-white px-4 py-2.5 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              >
+                {CATEGORIES.filter(c => c !== 'Internal Transfer' && c !== 'Income & Salary').map((cat) => (
+                  <option key={cat} value={cat} className="bg-zinc-900">{cat}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div></div> // empty spacer
+          )}
+          
+          <Input
+            label="تاریخ"
+            type="date"
+            required
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            leftIcon={<Calendar className="w-4 h-4" />}
+          />
+        </div>
+
+        {/* Vendor & Notes */}
+        {txType === 'EXPENSE' && (
+          <Input
+            label="فروشگاه / ذینفع"
+            placeholder="اختیاری"
+            value={vendor}
+            onChange={(e) => setVendor(e.target.value)}
+            leftIcon={<Store className="w-4 h-4" />}
+          />
+        )}
+        
+        <Input
+          label="توضیحات تکمیلی"
+          placeholder="اختیاری"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          leftIcon={<FileText className="w-4 h-4" />}
+        />
+
+        {/* Recurring Toggle */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isRecurring}
+              onChange={(e) => setIsRecurring(e.target.checked)}
+              className="rounded bg-black/40 border-white/20 text-indigo-500 focus:ring-indigo-500/50 w-4 h-4"
+            />
+            <span className="text-sm font-medium text-zinc-200">تبدیل به هزینه ثابت ماهانه</span>
+          </label>
+          
+          {isRecurring && (
+            <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+              <span className="text-sm text-zinc-400">ثبت خودکار در روز</span>
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={recurringDay}
+                onChange={(e) => setRecurringDay(e.target.value)}
+                className="w-20 !py-1 text-center font-mono"
+              />
+              <span className="text-sm text-zinc-400">هر ماه</span>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="pt-2 flex gap-3">
+          <Button type="button" variant="ghost" onClick={onClose} className="flex-1">
+            انصراف
+          </Button>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || numericAmount <= 0} 
+            isLoading={isSubmitting}
+            className="flex-[2] bg-indigo-600"
+          >
+            {initialData ? 'بروزرسانی' : 'ثبت تراکنش'}
+          </Button>
+        </div>
+      </form>
+    </BottomSheet>
   );
 };

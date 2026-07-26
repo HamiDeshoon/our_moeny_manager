@@ -21,6 +21,8 @@ import {
 import { AppSettings, Category, Transaction } from '../types';
 import { formatMoney, formatJalaliDate } from '../utils/formatters';
 import { exportToCSV, triggerPDFPrint } from '../utils/exporter';
+import { TransactionItem } from './TransactionItem';
+import { EmptyState } from './EmptyState';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -184,27 +186,12 @@ export const TransactionList: React.FC<TransactionListProps> = ({
     return filtered.slice(start, start + ITEMS_PER_PAGE);
   }, [filtered, currentPage]);
 
-  const getPayerBadge = (paidBy: string) => {
-    if (paidBy === settings.partnerA.id) {
-      return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-          <span>{settings.partnerA.avatar}</span>
-          <span>{settings.partnerA.name}</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-        <span>{settings.partnerB.avatar}</span>
-        <span>{settings.partnerB.name}</span>
-      </span>
-    );
-  };
+
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-sm">
       {/* Controls Bar: Search & Filters */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 space-y-3.5 bg-slate-50/50">
+      <div className="p-4 sm:p-5 border-b border-white/10 space-y-3.5 bg-black/20">
         {/* Top Controls Row */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Box */}
@@ -212,13 +199,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search expenses, vendors, notes, or amounts..."
+              placeholder="جستجو در تراکنش‌ها، مبالغ و توضیحات..."
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 shadow-2xs"
+              className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
             />
             {searchTerm && (
               <button
@@ -234,14 +221,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <div className="flex items-center space-x-2 flex-wrap">
             <button
               onClick={() => setShowAdvanced(!showAdvanced)}
-              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer shadow-2xs ${
+              className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                 showAdvanced || hasActiveFilters
-                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                  : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                  ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/10'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Filters {hasActiveFilters && '*'}</span>
+              <span>فیلترها {hasActiveFilters && '*'}</span>
             </button>
 
             <button
@@ -249,20 +236,20 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 const month = new Date().toISOString().substring(0, 7);
                 exportToCSV(filtered, settings, month);
               }}
-              title="Export CSV (Excel UTF-8 / Farsi Supported)"
-              className="flex items-center space-x-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+              title="خروجی اکسل (CSV)"
+              className="flex items-center space-x-1.5 bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Export CSV</span>
+              <Download className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">اکسل</span>
             </button>
 
             <button
               onClick={triggerPDFPrint}
-              title="Print / Save as PDF"
-              className="flex items-center space-x-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer shadow-2xs"
+              title="چاپ / PDF"
+              className="flex items-center space-x-1.5 bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 px-3 py-2 rounded-xl text-xs font-semibold transition cursor-pointer"
             >
-              <Printer className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Print / PDF</span>
+              <Printer className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">چاپ / PDF</span>
             </button>
           </div>
         </div>
@@ -272,18 +259,18 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 pt-1 text-xs">
             {/* Category Filter Dropdown */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Category</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">دسته‌بندی</label>
               <select
                 value={selectedCategory}
                 onChange={(e) => {
                   setSelectedCategory(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-indigo-600 shadow-2xs"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
                 {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat === 'ALL' ? 'All Categories' : cat}
+                  <option key={cat} value={cat} className="bg-zinc-900">
+                    {cat === 'ALL' ? 'همه' : cat}
                   </option>
                 ))}
               </select>
@@ -291,72 +278,71 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
             {/* Date Range Preset Dropdown */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Date Range</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">بازه زمانی</label>
               <select
                 value={datePreset}
                 onChange={(e) => {
                   setDatePreset(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-indigo-600 shadow-2xs"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="ALL_TIME">All Dates</option>
-                <option value="LAST_7_DAYS">Last 7 Days</option>
-                <option value="LAST_30_DAYS">Last 30 Days</option>
-                <option value="LAST_90_DAYS">Last 90 Days</option>
-                <option value="THIS_YEAR">This Year</option>
-                <option value="CUSTOM">Custom Range...</option>
+                <option value="ALL_TIME" className="bg-zinc-900">همه زمان‌ها</option>
+                <option value="LAST_7_DAYS" className="bg-zinc-900">۷ روز گذشته</option>
+                <option value="LAST_30_DAYS" className="bg-zinc-900">۳۰ روز گذشته</option>
+                <option value="LAST_90_DAYS" className="bg-zinc-900">۹۰ روز گذشته</option>
+                <option value="THIS_YEAR" className="bg-zinc-900">امسال</option>
+                <option value="CUSTOM" className="bg-zinc-900">محدوده سفارشی...</option>
               </select>
             </div>
 
             {/* Payer Filter Dropdown */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Paid By</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">پرداخت کننده</label>
               <select
                 value={selectedPayer}
                 onChange={(e) => {
                   setSelectedPayer(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-indigo-600 shadow-2xs"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="ALL">All Payers</option>
-                <option value={settings.partnerA.id}>{settings.partnerA.name}</option>
-                <option value={settings.partnerB.id}>{settings.partnerB.name}</option>
+                <option value="ALL" className="bg-zinc-900">همه</option>
+                <option value={settings.partnerA.id} className="bg-zinc-900">{settings.partnerA.name}</option>
+                <option value={settings.partnerB.id} className="bg-zinc-900">{settings.partnerB.name}</option>
               </select>
             </div>
 
             {/* Type Filter Dropdown */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Type</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">نوع تراکنش</label>
               <select
                 value={selectedType}
                 onChange={(e) => {
                   setSelectedType(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-indigo-600 shadow-2xs"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="ALL">All Types</option>
-                <option value="EXPENSE">Expenses Only</option>
-                <option value="INCOME">Income Only</option>
-                
-                <option value="TRANSFER">Transfers</option>
+                <option value="ALL" className="bg-zinc-900">همه انواع</option>
+                <option value="EXPENSE" className="bg-zinc-900">فقط هزینه‌ها</option>
+                <option value="INCOME" className="bg-zinc-900">فقط درآمدها</option>
+                <option value="TRANSFER" className="bg-zinc-900">انتقالات</option>
               </select>
             </div>
 
             {/* Sort By Dropdown */}
             <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Sort By</label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">مرتب‌سازی بر اساس</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-indigo-600 shadow-2xs"
+                className="w-full bg-black/20 border border-white/10 rounded-xl px-2.5 py-1.5 text-xs text-zinc-200 font-medium focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               >
-                <option value="date_desc">Newest Date</option>
-                <option value="date_asc">Oldest Date</option>
-                <option value="amount_desc">Highest Amount</option>
-                <option value="amount_asc">Lowest Amount</option>
+                <option value="date_desc" className="bg-zinc-900">جدیدترین تاریخ</option>
+                <option value="date_asc" className="bg-zinc-900">قدیمی‌ترین تاریخ</option>
+                <option value="amount_desc" className="bg-zinc-900">بیشترین مبلغ</option>
+                <option value="amount_asc" className="bg-zinc-900">کمترین مبلغ</option>
               </select>
             </div>
           </div>
@@ -364,13 +350,13 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
         {/* Custom Date Range Pickers (Visible when CUSTOM selected) */}
         {showAdvanced && datePreset === 'CUSTOM' && (
-          <div className="p-3 bg-white border border-slate-200 rounded-xl flex flex-wrap items-center gap-3 text-xs">
-            <span className="font-bold text-slate-700 flex items-center space-x-1">
-              <Calendar className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Custom Range:</span>
+          <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-wrap items-center gap-3 text-xs">
+            <span className="font-bold text-zinc-300 flex items-center space-x-1">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+              <span>محدوده سفارشی:</span>
             </span>
             <div className="flex items-center space-x-1.5">
-              <span className="text-slate-500">From:</span>
+              <span className="text-zinc-500">از:</span>
               <input
                 type="date"
                 value={customStartDate}
@@ -378,11 +364,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   setCustomStartDate(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 focus:outline-none"
+                className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-zinc-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div className="flex items-center space-x-1.5">
-              <span className="text-slate-500">To:</span>
+              <span className="text-zinc-500">تا:</span>
               <input
                 type="date"
                 value={customEndDate}
@@ -390,7 +376,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   setCustomEndDate(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 focus:outline-none"
+                className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-zinc-200 focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -398,10 +384,10 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
         {/* Advanced Filters Drawer (Min / Max Amount) */}
         {showAdvanced && (
-          <div className="p-3 bg-white border border-slate-200 rounded-xl flex flex-wrap items-center gap-4 text-xs">
-            <span className="font-bold text-slate-700">Amount Limits ({symbol}):</span>
+          <div className="p-3 bg-white/5 border border-white/10 rounded-xl flex flex-wrap items-center gap-4 text-xs">
+            <span className="font-bold text-zinc-300">محدودیت مبلغ ({symbol}):</span>
             <div className="flex items-center space-x-2">
-              <span className="text-slate-500">Min:</span>
+              <span className="text-zinc-500">حداقل:</span>
               <input
                 type="number"
                 placeholder="0"
@@ -410,20 +396,20 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                   setMinAmount(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-28 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono"
+                className="w-28 bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-zinc-200 font-mono focus:outline-none focus:border-indigo-500"
               />
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-slate-500">Max:</span>
+              <span className="text-zinc-500">حداکثر:</span>
               <input
                 type="number"
-                placeholder="No limit"
+                placeholder="بدون محدودیت"
                 value={maxAmount}
                 onChange={(e) => {
                   setMaxAmount(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-28 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 font-mono"
+                className="w-28 bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-zinc-200 font-mono focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -438,66 +424,66 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                 setSelectedCategory(cat);
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-indigo-600 text-white font-bold shadow-xs'
-                  : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/20 border border-indigo-500'
+                  : 'bg-white/5 hover:bg-white/10 text-zinc-400 border border-white/10'
               }`}
             >
-              {cat === 'ALL' ? 'All' : cat}
+              {cat === 'ALL' ? 'همه' : cat}
             </button>
           ))}
         </div>
 
         {/* Active Filter Tags & Reset Action */}
         {hasActiveFilters && (
-          <div className="flex items-center justify-between pt-1 border-t border-slate-200 text-xs">
+          <div className="flex items-center justify-between pt-1 border-t border-white/10 text-xs">
             <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-              <span className="text-[11px] font-bold text-slate-500">Active Filters:</span>
+              <span className="text-[11px] font-bold text-zinc-500">فیلترهای فعال:</span>
               {searchTerm && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
                   <span>"{searchTerm}"</span>
-                  <button onClick={() => setSearchTerm('')}><X className="w-3 h-3" /></button>
+                  <button onClick={() => setSearchTerm('')} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
               {selectedCategory !== 'ALL' && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-                  <span>Category: {selectedCategory}</span>
-                  <button onClick={() => setSelectedCategory('ALL')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                  <span>دسته‌بندی: {selectedCategory}</span>
+                  <button onClick={() => setSelectedCategory('ALL')} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
               {selectedPayer !== 'ALL' && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-                  <span>Payer: {selectedPayer === settings.partnerA.id ? settings.partnerA.name : settings.partnerB.name}</span>
-                  <button onClick={() => setSelectedPayer('ALL')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                  <span>پرداخت کننده: {selectedPayer === settings.partnerA.id ? settings.partnerA.name : settings.partnerB.name}</span>
+                  <button onClick={() => setSelectedPayer('ALL')} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
               {selectedType !== 'ALL' && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-                  <span>Type: {selectedType}</span>
-                  <button onClick={() => setSelectedType('ALL')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                  <span>نوع: {selectedType}</span>
+                  <button onClick={() => setSelectedType('ALL')} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
               {datePreset !== 'ALL_TIME' && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-                  <span>Range: {datePreset}</span>
-                  <button onClick={() => setDatePreset('ALL_TIME')}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                  <span>زمان: {datePreset}</span>
+                  <button onClick={() => setDatePreset('ALL_TIME')} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
               {(minAmount || maxAmount) && (
-                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200 font-medium">
-                  <span>Amount: {minAmount || '0'} - {maxAmount || '∞'}</span>
-                  <button onClick={() => { setMinAmount(''); setMaxAmount(''); }}><X className="w-3 h-3" /></button>
+                <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+                  <span>مبلغ: {minAmount || '0'} - {maxAmount || '∞'}</span>
+                  <button onClick={() => { setMinAmount(''); setMaxAmount(''); }} className="hover:text-white transition-colors"><X className="w-3 h-3" /></button>
                 </span>
               )}
             </div>
 
             <button
               onClick={resetFilters}
-              className="flex items-center space-x-1 text-slate-500 hover:text-rose-600 font-semibold px-2 py-1 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+              className="flex items-center space-x-1 text-zinc-500 hover:text-rose-400 font-semibold px-2 py-1 rounded-lg hover:bg-white/5 transition cursor-pointer"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Reset All</span>
+              <span>پاک‌کردن فیلترها</span>
             </button>
           </div>
         )}
@@ -505,142 +491,63 @@ export const TransactionList: React.FC<TransactionListProps> = ({
 
       {/* Transaction List Items */}
       {paginated.length === 0 ? (
-        <div className="p-12 text-center space-y-3">
-          <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 mx-auto">
-            <Tag className="w-6 h-6" />
-          </div>
-          <p className="text-sm font-semibold text-slate-700">No transactions match your query</p>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
-            Try adjusting your search keywords, clearing category or date filters, or log a new household expense.
-          </p>
-          {hasActiveFilters ? (
-            <button
-              onClick={resetFilters}
-              className="mt-2 inline-flex items-center space-x-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold px-4 py-2 rounded-xl border border-slate-300 transition"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Clear All Active Filters</span>
-            </button>
-          ) : (
-            <button
-              onClick={onOpenAddExpense}
-              className="mt-2 inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md shadow-indigo-100"
-            >
-              <span>Add New Expense</span>
-            </button>
-          )}
+        <div className="mt-4">
+          <EmptyState
+            icon={Tag}
+            title="هیچ تراکنشی یافت نشد"
+            description="کلمات کلیدی جستجو را تغییر دهید یا فیلترها را حذف کنید."
+            actionButton={
+              hasActiveFilters ? (
+                <button
+                  onClick={resetFilters}
+                  className="mt-2 inline-flex items-center space-x-2 bg-white/5 hover:bg-white/10 text-zinc-300 text-xs font-bold px-4 py-2 rounded-xl border border-white/10 transition"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>حذف همه فیلترها</span>
+                </button>
+              ) : (
+                <button
+                  onClick={onOpenAddExpense}
+                  className="mt-2 inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-md shadow-indigo-500/20"
+                >
+                  <span>ثبت تراکنش جدید</span>
+                </button>
+              )
+            }
+          />
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-sm">
           {paginated.map((tx) => (
-            <div
+            <TransactionItem
               key={tx.id}
-              className="p-4 hover:bg-slate-50/80 transition flex items-center justify-between gap-4 group"
-            >
-              <div className="flex items-start space-x-3.5 min-w-0">
-                <div
-                  className={`p-2.5 rounded-xl flex-shrink-0 mt-0.5 ${
-                    tx.type === 'EXPENSE'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : tx.type === 'TRANSFER'
-                      ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                      : tx.type === 'INCOME'
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : 'bg-slate-100 text-indigo-600 border border-slate-200'
-                  }`}
-                >
-                  {tx.type === 'EXPENSE' ? (
-                    <ArrowRightLeft className="w-4 h-4" />
-                  ) : tx.type === 'TRANSFER' ? (
-                    <ArrowRightLeft className="w-4 h-4" />
-                  ) : tx.type === 'INCOME' ? (
-                    <ArrowDownRight className="w-4 h-4" />
-                  ) : (
-                    <ArrowUpRight className="w-4 h-4" />
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                    <h4 className="text-sm font-bold text-slate-900 truncate">{tx.title}</h4>
-                    {getPayerBadge(tx.paidBy)}
-                    <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-medium">
-                      {tx.type === 'TRANSFER' ? 'Budget Transfer' : tx.category}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-3 text-xs text-slate-500 mt-1 flex-wrap gap-y-0.5">
-                    <span className="font-mono text-slate-600">
-                      {settings.useJalaliDate || isPersianContext ? formatJalaliDate(tx.date) : tx.date}
-                    </span>
-                    {tx.vendor && <span className="truncate">Store: {tx.vendor}</span>}
-                  </div>
-
-                  {tx.notes && (
-                    <p className="text-[11px] text-slate-500 truncate mt-0.5 italic">"{tx.notes}"</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Right Side: Amount & Action Buttons */}
-              <div className="flex items-center space-x-4 flex-shrink-0">
-                <div className="text-right">
-                  <span
-                    className={`text-base sm:text-lg font-bold font-mono block ${
-                      tx.type === 'EXPENSE'
-                        ? 'text-emerald-600'
-                        : tx.type === 'TRANSFER'
-                        ? 'text-amber-600'
-                        : tx.type === 'INCOME'
-                        ? 'text-emerald-600'
-                        : 'text-slate-900'
-                    }`}
-                  >
-                    {formatMoney(tx.amount, symbol)}
-                  </span>
-                  
-                </div>
-
-                <div className="flex items-center space-x-1 opacity-80 sm:opacity-0 group-hover:opacity-100 transition">
-                  <button
-                    onClick={() => onEditTransaction(tx)}
-                    className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition"
-                    title="Edit Expense"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteTransaction(tx.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-slate-100 rounded-lg transition"
-                    title="Delete Expense"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
+              tx={tx}
+              settings={settings}
+              onEdit={onEditTransaction}
+              onDelete={onDeleteTransaction}
+            />
           ))}
         </div>
       )}
 
       {/* Pagination Footer */}
       {totalPages > 1 && (
-        <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 bg-slate-50/50">
+        <div className="p-4 flex items-center justify-between text-xs text-zinc-500 mt-2">
           <span>
-            Page <strong className="text-slate-800">{currentPage}</strong> of <strong className="text-slate-800">{totalPages}</strong> ({filtered.length} items found)
+            صفحه <strong className="text-zinc-300">{currentPage}</strong> از <strong className="text-zinc-300">{totalPages}</strong> ({filtered.length} مورد)
           </span>
           <div className="flex items-center space-x-2">
             <button
               disabled={currentPage === 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="p-1.5 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 text-slate-600 rounded-lg transition shadow-2xs"
+              className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-zinc-400 rounded-lg transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="p-1.5 bg-white border border-slate-200 hover:bg-slate-100 disabled:opacity-40 text-slate-600 rounded-lg transition shadow-2xs"
+              className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-zinc-400 rounded-lg transition"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

@@ -1,23 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from './services/api';
 import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, Transaction } from './types';
 import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
 
 import { Header } from './components/Header';
 import { SummaryCards } from './components/SummaryCards';
-import { TransactionList } from './components/TransactionList';
-import { AnalyticsCharts } from './components/AnalyticsCharts';
-import { BudgetPlanner } from './components/BudgetPlanner';
-import { BillTracker } from './components/BillTracker';
-import { AIAdvisor } from './components/AIAdvisor';
-
-import { TransactionForm } from './components/TransactionForm';
-import { VoiceModal } from './components/VoiceModal';
-import { ReceiptScannerModal } from './components/ReceiptScannerModal';
-import { SettingsModal } from './components/SettingsModal';
-import { CSVImportModal } from './components/CSVImportModal';
-import { LoginModal } from './components/LoginModal';
+import { SkeletonList, SkeletonCard } from './components/SkeletonLoader';
 import { exportToCSV } from './utils/exporter';
+
+// Lazy load Tab Views
+const TransactionList = lazy(() => import('./components/TransactionList').then(m => ({ default: m.TransactionList })));
+const AnalyticsCharts = lazy(() => import('./components/AnalyticsCharts').then(m => ({ default: m.AnalyticsCharts })));
+const BudgetPlanner = lazy(() => import('./components/BudgetPlanner').then(m => ({ default: m.BudgetPlanner })));
+const BillTracker = lazy(() => import('./components/BillTracker').then(m => ({ default: m.BillTracker })));
+const AIAdvisor = lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
+
+// Lazy load Modals
+const TransactionForm = lazy(() => import('./components/TransactionForm').then(m => ({ default: m.TransactionForm })));
+const VoiceModal = lazy(() => import('./components/VoiceModal').then(m => ({ default: m.VoiceModal })));
+const ReceiptScannerModal = lazy(() => import('./components/ReceiptScannerModal').then(m => ({ default: m.ReceiptScannerModal })));
+const SettingsModal = lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
+const CSVImportModal = lazy(() => import('./components/CSVImportModal').then(m => ({ default: m.CSVImportModal })));
+const LoginModal = lazy(() => import('./components/LoginModal').then(m => ({ default: m.LoginModal })));
 
 const DEFAULT_SETTINGS: AppSettings = {
   geminiApiKey: '',
@@ -129,7 +134,7 @@ export default function App() {
   }, [selectedMonth]);
 
   // Transaction Handlers
-  const handleSaveTransaction = async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
+  const handleSaveTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
     if (editingTransaction) {
       await api.updateTransaction(editingTransaction.id, txData);
       setEditingTransaction(null);
@@ -137,63 +142,69 @@ export default function App() {
       await api.addTransaction(txData);
     }
     await loadData();
-  };
+  }, [editingTransaction]);
 
-  const handleDeleteTransaction = async (id: string) => {
+  const handleDeleteTransaction = useCallback(async (id: string) => {
     await api.deleteTransaction(id);
     await loadData();
-  };
+  }, []);
 
   // Budget Handlers
-  const handleUpdateBudgets = async (newBudgets: Budget[]) => {
+  const handleUpdateBudgets = useCallback(async (newBudgets: Budget[]) => {
     await api.updateBudgets(newBudgets);
     await loadData();
-  };
+  }, []);
 
   // Bill Handlers
-  const handleToggleBillPaid = async (id: string, isPaid: boolean) => {
+  const handleToggleBillPaid = useCallback(async (id: string, isPaid: boolean) => {
     await api.toggleBillPaid(id, isPaid);
     await loadData();
-  };
+  }, []);
 
-  const handleAddBill = async (billData: Omit<Bill, 'id'>) => {
+  const handleAddBill = useCallback(async (billData: Omit<Bill, 'id'>) => {
     await api.addBill(billData);
     await loadData();
-  };
+  }, []);
 
-  const handleDeleteBill = async (id: string) => {
+  const handleDeleteBill = useCallback(async (id: string) => {
     await api.deleteBill(id);
     await loadData();
-  };
+  }, []);
 
   // Settings Handler
-  const handleUpdateSettings = async (newSettings: Partial<AppSettings>) => {
+  const handleUpdateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     await api.updateSettings(newSettings);
     await loadData();
-  };
+  }, []);
 
   const activeSettings = settings || DEFAULT_SETTINGS;
   const activeSummary = summary || DEFAULT_SUMMARY;
 
   if (isLoading && !settings) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 flex flex-col items-center justify-center p-4 text-slate-800 font-vazirmatn">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <h2 className="text-base font-bold tracking-tight text-slate-800">در حال بارگذاری DuoSpend...</h2>
-        <p className="text-xs text-slate-500 mt-1">محاسبه بودجه و تراکنش‌های خانه</p>
+      <div className="min-h-screen bg-black flex flex-col p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 mt-16">
+        <div className="flex gap-4">
+          <div className="flex-1">
+             <SkeletonCard />
+          </div>
+          <div className="flex-1 hidden sm:block">
+             <SkeletonCard />
+          </div>
+        </div>
+        <SkeletonList count={5} />
       </div>
     );
   }
 
   if (loadError && !settings) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 flex flex-col items-center justify-center p-6 text-slate-800 font-vazirmatn text-center">
-        <div className="p-6 bg-white border border-slate-200 rounded-3xl max-w-md space-y-4 shadow-xl">
-          <h2 className="text-lg font-extrabold text-rose-600">خطا در اتصال به سرور</h2>
-          <p className="text-xs text-slate-600">{loadError}</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-6 bg-zinc-900 border border-white/10 rounded-3xl max-w-md space-y-4 shadow-xl">
+          <h2 className="text-lg font-extrabold text-rose-500">خطا در اتصال به سرور</h2>
+          <p className="text-xs text-zinc-400">{loadError}</p>
           <button
             onClick={() => loadData()}
-            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
+            className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
           >
             تلاش مجدد (Retry Connection)
           </button>
@@ -205,7 +216,7 @@ export default function App() {
   return (
     <div
       dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 text-slate-800 font-vazirmatn antialiased selection:bg-indigo-600 selection:text-white"
+      className="min-h-screen w-full overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200"
     >
       {/* Header */}
       <Header
@@ -235,77 +246,121 @@ export default function App() {
           settings={activeSettings}
         />
 
-        {/* Tab Views */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            <AnalyticsCharts
-              transactions={transactions}
-              budgets={budgets}
-              settings={activeSettings}
-              selectedMonth={selectedMonth}
-            />
-            <TransactionList
-              transactions={transactions}
-              settings={activeSettings}
-              onEditTransaction={(tx) => {
-                setEditingTransaction(tx);
-                setIsAddExpenseOpen(true);
-              }}
-              onDeleteTransaction={handleDeleteTransaction}
-              onOpenAddExpense={() => {
-                setEditingTransaction(null);
-                setIsAddExpenseOpen(true);
-              }}
-            />
-          </div>
-        )}
+        <Suspense fallback={<div className="mt-8"><SkeletonList count={3} /></div>}>
+          {/* Tab Views */}
+          <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div
+              key="dashboard"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-6"
+            >
+              <AnalyticsCharts
+                transactions={transactions}
+                budgets={budgets}
+                settings={activeSettings}
+                selectedMonth={selectedMonth}
+              />
+              <TransactionList
+                transactions={transactions}
+                settings={activeSettings}
+                onEditTransaction={(tx) => {
+                  setEditingTransaction(tx);
+                  setIsAddExpenseOpen(true);
+                }}
+                onDeleteTransaction={handleDeleteTransaction}
+                onOpenAddExpense={() => {
+                  setEditingTransaction(null);
+                  setIsAddExpenseOpen(true);
+                }}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'transactions' && (
-          <TransactionList
-            transactions={transactions}
-            settings={activeSettings}
-            onEditTransaction={(tx) => {
-              setEditingTransaction(tx);
-              setIsAddExpenseOpen(true);
-            }}
-            onDeleteTransaction={handleDeleteTransaction}
-            onOpenAddExpense={() => {
-              setEditingTransaction(null);
-              setIsAddExpenseOpen(true);
-            }}
-          />
-        )}
+          {activeTab === 'transactions' && (
+            <motion.div
+              key="transactions"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <TransactionList
+                transactions={transactions}
+                settings={activeSettings}
+                onEditTransaction={(tx) => {
+                  setEditingTransaction(tx);
+                  setIsAddExpenseOpen(true);
+                }}
+                onDeleteTransaction={handleDeleteTransaction}
+                onOpenAddExpense={() => {
+                  setEditingTransaction(null);
+                  setIsAddExpenseOpen(true);
+                }}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'budgets' && (
-          <BudgetPlanner
-            budgets={budgets}
-            transactions={transactions}
-            settings={activeSettings}
-            onUpdateBudgets={handleUpdateBudgets}
-            onRefreshTransactions={loadData}
-          />
-        )}
+          {activeTab === 'budgets' && (
+            <motion.div
+              key="budgets"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <BudgetPlanner
+                budgets={budgets}
+                transactions={transactions}
+                settings={activeSettings}
+                onUpdateBudgets={handleUpdateBudgets}
+                onRefreshTransactions={loadData}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'bills' && (
-          <BillTracker
-            bills={bills}
-            settings={activeSettings}
-            onToggleBillPaid={handleToggleBillPaid}
-            onAddBill={handleAddBill}
-            onDeleteBill={handleDeleteBill}
-          />
-        )}
+          {activeTab === 'bills' && (
+            <motion.div
+              key="bills"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <BillTracker
+                bills={bills}
+                settings={activeSettings}
+                onToggleBillPaid={handleToggleBillPaid}
+                onAddBill={handleAddBill}
+                onDeleteBill={handleDeleteBill}
+              />
+            </motion.div>
+          )}
 
-        {activeTab === 'insights' && (
-          <AIAdvisor
-            selectedMonth={selectedMonth}
-            settings={activeSettings}
-          />
-        )}
+          {activeTab === 'insights' && (
+            <motion.div
+              key="insights"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              <AIAdvisor
+                selectedMonth={selectedMonth}
+                settings={activeSettings}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        </Suspense>
       </main>
 
       {/* Modals */}
-      <TransactionForm
+      <Suspense fallback={null}>
+        <TransactionForm
         isOpen={isAddExpenseOpen}
         onClose={() => {
           setIsAddExpenseOpen(false);
@@ -348,15 +403,16 @@ export default function App() {
         onImportComplete={loadData}
       />
 
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        currentUser={currentUser}
-        onLoginSuccess={(user) => {
-          setCurrentUser(user);
-          loadData();
-        }}
-      />
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          currentUser={currentUser}
+          onLoginSuccess={(user) => {
+            setCurrentUser(user);
+            loadData();
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

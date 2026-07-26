@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { X, Mic, Sparkles, Send, CheckCircle2, AlertCircle, RefreshCw, Languages, Target, Repeat, Calendar } from 'lucide-react';
+import { Mic, Sparkles, Send, CheckCircle2, AlertCircle, RefreshCw, Languages } from 'lucide-react';
 import { api } from '../services/api';
 import { AIParsedVoice, AppSettings, Transaction } from '../types';
 import { formatMoney } from '../utils/formatters';
+import { BottomSheet } from './ui/BottomSheet';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface VoiceModalProps {
   isOpen: boolean;
@@ -27,9 +30,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   const [editableAmount, setEditableAmount] = useState<number | ''>('');
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
-  // Web Speech API Microphone recorder handler
   const handleToggleListening = () => {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       alert('Speech Recognition is not supported by this browser. You can type your voice memo directly!');
@@ -135,7 +135,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
           autopay: Boolean(parsedResult.autopay),
         });
       } else {
-        // Standard expense
         await onSaveTransaction({
           title: parsedResult.title || 'Voice Expense',
           amount,
@@ -160,223 +159,163 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   const samplePrompts = [
     `حمید ۳۵۰ هزار تومان خرید هایپراستار کرد`,
     `سقف بودجه سوپرمارکت رو کن ۱۰ میلیون تومان`,
-    `هر ماه ۱۵ میلیون بابت اجاره خانه سهم حمید اضافه کن`,
     `قبض اینترنت ماهانه پانزدهم ۲۰۰ هزار تومان اضافه کن`,
-    `فاطمه ۶۵۰ هزار تومان شام در کافه طهرون داد`,
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto font-vazirmatn">
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-8">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-200">
-              <Sparkles className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-base font-extrabold text-slate-900">دستیار صوتی و متنی هوشمند Gemini</h2>
-              <p className="text-xs text-slate-500">ثبت خرج، تغییر بودجه ماهانه، تعریف هزینه دوره‌ای و قبض</p>
-            </div>
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="دستیار هوشمند جمینای">
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3 text-zinc-400 text-sm">
+          <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+            <Sparkles className="w-5 h-5 animate-pulse" />
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-800 p-1.5 rounded-xl hover:bg-slate-100 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <p>ثبت خرج، بودجه و قبض با گفتار طبیعی.</p>
         </div>
 
-        {/* Modal Content */}
-        <div className="p-6 space-y-4">
-          {/* Language Selector Bar */}
-          <div className="flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200 text-xs">
-            <div className="flex items-center space-x-1.5 text-slate-600 font-semibold">
-              <Languages className="w-4 h-4 text-indigo-600" />
-              <span>زبان گفتار (Voice Language):</span>
-            </div>
-            <div className="flex space-x-1">
-              <button
-                type="button"
-                onClick={() => setSpeechLang('fa-IR')}
-                className={`px-3 py-1 rounded-lg font-bold text-xs transition ${
-                  speechLang === 'fa-IR'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                🇮🇷 فارسی
-              </button>
-              <button
-                type="button"
-                onClick={() => setSpeechLang('en-US')}
-                className={`px-3 py-1 rounded-lg font-bold text-xs transition ${
-                  speechLang === 'en-US'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                }`}
-              >
-                🇬🇧 English
-              </button>
-            </div>
+        {/* Language Selector */}
+        <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 text-sm">
+          <div className="flex items-center space-x-2 text-zinc-300">
+            <Languages className="w-4 h-4 text-indigo-400" />
+            <span>زبان گفتار:</span>
           </div>
-
-          {/* Audio Record & Input Area */}
-          <div className="relative">
-            <textarea
-              rows={3}
-              placeholder='مثلاً: "حمید ۲۵۰ هزار تومان خرید هایپراستار کرد" یا "بودجه سوپرمارکت رو کن ۸ میلیون"'
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-2xl p-4 pr-12 text-slate-900 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:border-indigo-600 shadow-2xs font-medium"
-            />
+          <div className="flex space-x-2 bg-black/20 p-1 rounded-lg">
             <button
-              onClick={handleToggleListening}
-              className={`absolute left-3 bottom-3 p-2.5 rounded-xl transition ${
-                isListening
-                  ? 'bg-rose-500 text-white animate-bounce shadow-md'
-                  : 'bg-slate-100 hover:bg-slate-200 text-indigo-600 border border-slate-200'
+              type="button"
+              onClick={() => setSpeechLang('fa-IR')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                speechLang === 'fa-IR' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
               }`}
-              title={`ضبط صدا (${speechLang === 'fa-IR' ? 'فارسی' : 'English'})`}
             >
-              <Mic className="w-4 h-4" />
+              فارسی
+            </button>
+            <button
+              type="button"
+              onClick={() => setSpeechLang('en-US')}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition ${
+                speechLang === 'en-US' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              English
             </button>
           </div>
-
-          {/* Quick Example Prompts */}
-          <div>
-            <span className="text-[11px] font-bold uppercase text-slate-500 block mb-1.5">
-              نمونه عبارت‌های هوشمند برای تست (Try AI Prompt):
-            </span>
-            <div className="space-y-1.5">
-              {samplePrompts.map((p, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => {
-                    setTranscript(p);
-                    handleParseTranscript(p);
-                  }}
-                  className="w-full text-right text-xs bg-slate-50 hover:bg-indigo-50 hover:text-indigo-900 text-slate-700 font-medium px-3 py-2 rounded-xl border border-slate-200 transition truncate cursor-pointer"
-                >
-                  "{p}"
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Parse Button */}
-          <button
-            onClick={() => handleParseTranscript()}
-            disabled={isProcessing || !transcript.trim()}
-            className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-3 rounded-2xl text-xs transition shadow-md shadow-indigo-100 cursor-pointer"
-          >
-            {isProcessing ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Gemini در حال تحلیل هوشمند و تشخیص قصد کاربر...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                <span>تحلیل هوشمند با جمینای (Gemini AI Execute)</span>
-              </>
-            )}
-          </button>
-
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start space-x-2.5 text-xs text-rose-800">
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Parsed Result Preview Card */}
-          {parsedResult && (
-            <div className="bg-indigo-50/70 p-4 rounded-2xl border border-indigo-200 space-y-3">
-              <div className="flex items-center justify-between border-b border-indigo-100 pb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center space-x-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 ml-1" />
-                  <span>
-                    {parsedResult.actionType === 'SET_BUDGET'
-                      ? 'تغییر بودجه ماهانه (Budget Update)'
-                      : parsedResult.actionType === 'ADD_RECURRING'
-                      ? 'تعریف هزینه دوره‌ای (Recurring Rule)'
-                      : parsedResult.actionType === 'ADD_BILL'
-                      ? 'تعریف قبض ماهانه (Bill Reminder)'
-                      : 'تراکنش جدید (New Expense)'}
-                  </span>
-                </span>
-                <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full border border-indigo-200 font-bold">
-                  آماده اجرا
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-slate-500 block">عنوان (Title):</span>
-                  <span className="font-semibold text-slate-900">{parsedResult.title || parsedResult.category}</span>
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-slate-500 block">مبلغ:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cur = typeof editableAmount === 'number' ? editableAmount : Number(editableAmount) || 0;
-                        if (cur > 0) {
-                          setEditableAmount(Math.round(cur / 10));
-                        }
-                      }}
-                      title="تبدیل ریال به تومان (قسمت بر ۱۰)"
-                      className="text-[9px] bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 px-1.5 py-0.5 rounded-md font-bold transition cursor-pointer"
-                    >
-                      <span>ریال ➔ تومان (÷۱۰)</span>
-                    </button>
-                  </div>
-                  <input
-                    type="number"
-                    value={editableAmount}
-                    onChange={(e) => setEditableAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full bg-white border border-indigo-200 rounded-lg px-2 py-1 text-xs font-extrabold text-indigo-700 font-mono"
-                  />
-                  <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
-                    {formatMoney(typeof editableAmount === 'number' ? editableAmount : 0, settings.currencySymbol)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">دسته‌بندی (Category):</span>
-                  <span className="font-semibold text-slate-800">{parsedResult.category}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">پرداخت‌کننده / فرد:</span>
-                  <span className="font-semibold text-slate-800">
-                    {parsedResult.paidBy === settings.partnerA.id
-                      ? `${settings.partnerA.avatar} ${settings.partnerA.name}`
-                      : `${settings.partnerB.avatar} ${settings.partnerB.name}`}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">تاریخ / زمان:</span>
-                  <span className="font-mono text-slate-700">{parsedResult.date}</span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block">نوع اقدام AI:</span>
-                  <span className="font-bold text-indigo-700">{parsedResult.actionType || 'LOG_EXPENSE'}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleConfirmAndSave}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md shadow-emerald-100 cursor-pointer"
-              >
-                تایید و اعمال تغییرات در DuoSpend
-              </button>
-            </div>
-          )}
         </div>
+
+        {/* Audio Input Area */}
+        <div className="relative">
+          <textarea
+            rows={3}
+            placeholder='مثلاً: "حمید ۲۵۰ هزار تومان خرید هایپراستار کرد"'
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            className="w-full bg-black/20 border border-white/10 rounded-xl p-4 pr-12 text-zinc-100 placeholder-zinc-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all resize-none"
+          />
+          <button
+            onClick={handleToggleListening}
+            className={`absolute left-3 bottom-3 p-2 rounded-xl transition-all ${
+              isListening
+                ? 'bg-rose-500 text-white shadow-[0_0_15px_rgba(244,63,94,0.5)] animate-pulse'
+                : 'bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20'
+            }`}
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Quick Example Prompts */}
+        <div>
+          <span className="text-xs font-medium text-zinc-500 mb-2 block">نمونه‌های آماده:</span>
+          <div className="space-y-2">
+            {samplePrompts.map((p, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  setTranscript(p);
+                  handleParseTranscript(p);
+                }}
+                className="w-full text-right text-xs bg-white/5 hover:bg-white/10 text-zinc-300 font-medium px-4 py-2.5 rounded-xl border border-white/5 transition"
+              >
+                "{p}"
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Button
+          onClick={() => handleParseTranscript()}
+          disabled={isProcessing || !transcript.trim()}
+          isLoading={isProcessing}
+          leftIcon={<Send className="w-4 h-4" />}
+          className="w-full"
+        >
+          تحلیل هوشمند
+        </Button>
+
+        {error && (
+          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start space-x-3 text-sm text-rose-400">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Parsed Result Preview */}
+        {parsedResult && (
+          <div className="bg-indigo-500/5 p-4 rounded-xl border border-indigo-500/20 space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <span className="text-sm font-semibold text-indigo-400 flex items-center">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-1.5" />
+                {parsedResult.actionType === 'SET_BUDGET' ? 'تغییر بودجه' : 
+                 parsedResult.actionType === 'ADD_RECURRING' ? 'هزینه دوره‌ای' :
+                 parsedResult.actionType === 'ADD_BILL' ? 'قبض ماهانه' : 'تراکنش جدید'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-zinc-500 block mb-1">عنوان:</span>
+                <span className="font-medium text-zinc-200">{parsedResult.title || parsedResult.category}</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block mb-1 flex items-center justify-between">
+                  مبلغ:
+                  <button
+                    onClick={() => {
+                      const cur = typeof editableAmount === 'number' ? editableAmount : Number(editableAmount) || 0;
+                      if (cur > 0) setEditableAmount(Math.round(cur / 10));
+                    }}
+                    className="text-[10px] bg-white/5 border border-white/10 px-2 py-0.5 rounded text-zinc-400 hover:text-white"
+                  >
+                    ÷۱۰ (تومان)
+                  </button>
+                </span>
+                <Input
+                  type="number"
+                  value={editableAmount}
+                  onChange={(e) => setEditableAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                  className="!px-3 !py-1.5 font-mono"
+                />
+                <span className="text-[10px] text-zinc-500 block mt-1">
+                  {formatMoney(typeof editableAmount === 'number' ? editableAmount : 0, settings.currencySymbol)}
+                </span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block mb-1">دسته‌بندی:</span>
+                <span className="font-medium text-zinc-200">{parsedResult.category}</span>
+              </div>
+              <div>
+                <span className="text-zinc-500 block mb-1">پرداخت‌کننده:</span>
+                <span className="font-medium text-zinc-200">
+                  {parsedResult.paidBy === settings.partnerA.id ? settings.partnerA.name : settings.partnerB.name}
+                </span>
+              </div>
+            </div>
+
+            <Button onClick={handleConfirmAndSave} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white mt-2">
+              تایید و ثبت نهایی
+            </Button>
+          </div>
+        )}
       </div>
-    </div>
+    </BottomSheet>
   );
 };

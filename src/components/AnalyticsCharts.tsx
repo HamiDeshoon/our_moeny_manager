@@ -17,7 +17,8 @@ import {
 } from 'recharts';
 import { AppSettings, Budget, MonthTrendData, Transaction } from '../types';
 import { api } from '../services/api';
-import { TrendingUp, TrendingDown, PiggyBank, Calendar, Sparkles, ShieldAlert, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, PiggyBank, Calendar, Sparkles, ShieldAlert, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendSummaryCards } from './TrendSummaryCards';
 
 interface AnalyticsChartsProps {
   transactions: Transaction[];
@@ -161,37 +162,37 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
   return (
     <div className="space-y-6 mb-8">
       {/* View Selector Header */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex items-center justify-between">
+      <div className="bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-xs flex items-center justify-between">
         <div className="flex items-center space-x-2.5">
-          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+          <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 ml-2">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm font-extrabold text-slate-900">تحلیل‌های مالی و روند پس‌انداز (Analytics & Saving Trends)</h2>
-            <p className="text-xs text-slate-500">بررسی مخارج و مقایسه روند ۳ ماه اخیر</p>
+            <h2 className="text-sm font-extrabold text-white">تحلیل‌های مالی و روند پس‌انداز (Analytics & Saving Trends)</h2>
+            <p className="text-xs text-zinc-400 mt-1">بررسی مخارج و مقایسه روند ۳ ماه اخیر</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
+        <div className="flex items-center gap-1.5 bg-black/20 p-1.5 rounded-xl border border-white/5">
           <button
             onClick={() => setActiveTab('3month')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeTab === '3month'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            مقایسه ۳ ماه اخیر (3-Month Comparative)
+            مقایسه ۳ ماه اخیر
           </button>
           <button
             onClick={() => setActiveTab('current')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition ${
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
               activeTab === 'current'
-                ? 'bg-white text-indigo-700 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
+                : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            ماه جاری (Current Month)
+            ماه جاری
           </button>
         </div>
       </div>
@@ -201,79 +202,19 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
         <div className="space-y-6">
           {/* Summary Metric Cards for 3-Month Trends */}
           {trendSummary && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl p-5 shadow-sm space-y-1">
-                <div className="flex items-center justify-between text-emerald-100 text-xs font-medium">
-                  <span>مجموع پس‌انداز ۳ ماه اخیر</span>
-                  <PiggyBank className="w-4 h-4 text-emerald-200" />
-                </div>
-                <div className="text-2xl font-black font-mono">
-                  {trendSummary.totalSavingsSum.toLocaleString()} <span className="text-xs font-normal text-emerald-100">{symbol}</span>
-                </div>
-                <p className="text-[11px] text-emerald-100">درصد پس‌انداز میانگین: {trendSummary.avgSavingsRate}%</p>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-1">
-                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-                  <span>میانگین هزینه ماهانه</span>
-                  <Calendar className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="text-xl font-extrabold text-slate-900 font-mono">
-                  {trendSummary.avgMonthlyExpense.toLocaleString()} <span className="text-xs text-slate-500">{symbol}</span>
-                </div>
-                <div className="flex items-center space-x-1 text-[11px]">
-                  {trendSummary.expenseDeltaPct <= 0 ? (
-                    <span className="text-emerald-600 font-bold flex items-center">
-                      <ArrowDownRight className="w-3.5 h-3.5 ml-0.5" />
-                      {Math.abs(trendSummary.expenseDeltaPct)}% کاهش نسبت به ماه قبل
-                    </span>
-                  ) : (
-                    <span className="text-rose-600 font-bold flex items-center">
-                      <ArrowUpRight className="w-3.5 h-3.5 ml-0.5" />
-                      {trendSummary.expenseDeltaPct}% افزایش نسبت به ماه قبل
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-1">
-                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-                  <span>وضعیت روند پس‌انداز (Saving Trend)</span>
-                  <Sparkles className="w-4 h-4 text-amber-500" />
-                </div>
-                <div className="text-base font-extrabold text-indigo-700 flex items-center space-x-1">
-                  <span>{trendSummary.avgSavingsRate >= 20 ? '🟢 عالی (قوی)' : '🟡 متوسط'}</span>
-                </div>
-                <p className="text-[11px] text-slate-500">
-                  {trendSummary.avgSavingsRate >= 20
-                    ? 'روند پس‌انداز شخص و خانواده مثبت و صعودی است.'
-                    : 'با کاهش هزینه‌های متفرقه امکان پس‌انداز بیشتر وجود دارد.'}
-                </p>
-              </div>
-
-              <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs space-y-1">
-                <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-                  <span>تولید هوشمند گزارش</span>
-                  <ShieldAlert className="w-4 h-4 text-indigo-500" />
-                </div>
-                <div className="text-xs font-bold text-slate-800">
-                  مقایسه ۳ دوره ماهانه کاملاً به‌روز
-                </div>
-                <p className="text-[11px] text-slate-500">شامل سهم پرداختی {settings.partnerA.name} و {settings.partnerB.name}</p>
-              </div>
-            </div>
+            <TrendSummaryCards trendSummary={trendSummary} settings={settings} />
           )}
 
           {/* 3-Month Comparative Chart: Expenses vs Savings */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  نمودار مقایسه‌ای هزینه‌ها و پس‌انداز ۳ ماه اخیر (3-Month Spend vs. Savings)
+                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                  نمودار مقایسه‌ای هزینه‌ها و پس‌انداز ۳ ماه اخیر
                 </h3>
-                <p className="text-[11px] text-slate-500">مقایسه هزینه‌ها (میله‌ای) و نرخ پس‌انداز (خط بنفش)</p>
+                <p className="text-[11px] text-zinc-500 mt-1">مقایسه هزینه‌ها (میله‌ای) و نرخ پس‌انداز (خط بنفش)</p>
               </div>
-              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+              <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full">
                 3 Months Trend
               </span>
             </div>
@@ -312,19 +253,19 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
 
           {/* MoM Category Comparison Table */}
           {categoryMatrixData.length > 0 && (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-xs space-y-4 overflow-hidden">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                    تغییرات هزینه‌های دسته‌بندی‌ها در ۳ ماه اخیر (Category MoM Trends)
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                    تغییرات هزینه‌های دسته‌بندی‌ها در ۳ ماه اخیر
                   </h3>
-                  <p className="text-[11px] text-slate-500">بررسی ردیف به ردیف دسته‌ها برای شناسایی فرصت‌های صرفه‌جویی</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">بررسی ردیف به ردیف دسته‌ها برای شناسایی فرصت‌های صرفه‌جویی</p>
                 </div>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-right text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                  <thead className="bg-black/20 text-zinc-400 font-bold border-b border-white/10">
                     <tr>
                       <th className="p-3">دسته‌بندی</th>
                       {threeMonthTrends.map((m) => (
@@ -333,26 +274,26 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                       <th className="p-3">تغییر نسبت به ماه قبل</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-white/5">
                     {categoryMatrixData.map((row) => (
-                      <tr key={row.category} className="hover:bg-slate-50/80">
-                        <td className="p-3 font-bold text-slate-800">{row.category}</td>
-                        <td className="p-3 font-mono text-slate-600">{row.month1.toLocaleString()} {symbol}</td>
-                        <td className="p-3 font-mono text-slate-600">{row.month2.toLocaleString()} {symbol}</td>
-                        <td className="p-3 font-mono font-bold text-slate-900">{row.month3.toLocaleString()} {symbol}</td>
+                      <tr key={row.category} className="hover:bg-white/5 transition-colors">
+                        <td className="p-3 font-bold text-zinc-200">{row.category}</td>
+                        <td className="p-3 font-mono text-zinc-400">{row.month1.toLocaleString()} {symbol}</td>
+                        <td className="p-3 font-mono text-zinc-400">{row.month2.toLocaleString()} {symbol}</td>
+                        <td className="p-3 font-mono font-bold text-indigo-400">{row.month3.toLocaleString()} {symbol}</td>
                         <td className="p-3">
                           {row.deltaPct < 0 ? (
-                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
                               <ArrowDownRight className="w-3 h-3 ml-0.5" />
                               {Math.abs(row.deltaPct)}% صرفه‌جویی
                             </span>
                           ) : row.deltaPct > 0 ? (
-                            <span className="inline-flex items-center text-[10px] font-bold text-rose-700 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                            <span className="inline-flex items-center text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
                               <ArrowUpRight className="w-3 h-3 ml-0.5" />
                               {row.deltaPct}% افزایش
                             </span>
                           ) : (
-                            <span className="text-[10px] text-slate-400">ثابت</span>
+                            <span className="text-[10px] text-zinc-500">ثابت</span>
                           )}
                         </td>
                       </tr>
@@ -369,17 +310,17 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       {activeTab === 'current' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Donut Chart: Category Spending Distribution */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Spending by Category
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                هزینه‌ها بر اساس دسته‌بندی
               </h3>
-              <span className="text-xs text-slate-500">Total Breakdown</span>
+              <span className="text-xs text-zinc-500">مجموع</span>
             </div>
 
             {categoryData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-xs text-slate-400">
-                No expense data available for this month
+              <div className="h-64 flex items-center justify-center text-xs text-zinc-500">
+                هیچ اطلاعاتی برای این ماه موجود نیست
               </div>
             ) : (
               <div className="h-64">
@@ -415,31 +356,31 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
             )}
 
             {/* Legend */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-slate-100 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/10 text-xs">
               {categoryData.slice(0, 6).map((item, idx) => (
                 <div key={item.name} className="flex items-center space-x-1.5 truncate">
                   <span
                     className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                     style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                   />
-                  <span className="text-slate-600 truncate">{item.name}</span>
+                  <span className="text-zinc-400 truncate">{item.name}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Bar Chart: Partner Contribution Comparison */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-xs">
+          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-xs">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Partner Payment Comparison
+              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                مقایسه پرداختی اعضا
               </h3>
-              <span className="text-xs text-slate-500">Paid Amounts</span>
+              <span className="text-xs text-zinc-500">مبالغ پرداختی</span>
             </div>
 
             {partnerComparisonData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-xs text-slate-400">
-                No comparative data available
+              <div className="h-64 flex items-center justify-center text-xs text-zinc-500">
+                داده مقایسه‌ای موجود نیست
               </div>
             ) : (
               <div className="h-64">

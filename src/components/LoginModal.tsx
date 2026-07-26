@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { X, Lock, User, LogIn, Key, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { User, LogIn, Key, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { AuthUser } from '../types';
 import { api } from '../services/api';
+import { BottomSheet } from './ui/BottomSheet';
+import { Button } from './ui/Button';
+import { Input } from './ui/Input';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -20,8 +23,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  if (!isOpen) return null;
 
   const handleQuickSelect = (userKey: 'hamid' | 'fati') => {
     if (userKey === 'hamid') {
@@ -61,142 +62,103 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-200">
-        {/* Modal Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-extrabold text-slate-900">ورود اعضای خانواده</h2>
-              <p className="text-xs text-slate-500 font-medium">Household Member Portal</p>
-            </div>
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="ورود به حساب کاربری">
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3 text-zinc-400 text-sm">
+          <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-          {currentUser && (
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+          <p>لطفا نام کاربری خود را برای دسترسی انتخاب کنید.</p>
         </div>
 
-        {/* Quick User Selection Buttons */}
-        <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-700 block">انتخاب سریع کاربر (Quick Select):</label>
+        {/* Quick User Selection */}
+        <div>
+          <label className="text-sm font-medium text-zinc-300 block mb-2">انتخاب سریع:</label>
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => handleQuickSelect('hamid')}
-              className={`p-3.5 rounded-2xl border text-right transition flex items-center justify-between cursor-pointer ${
+              className={`p-3 rounded-xl border text-right transition-all flex items-center justify-between ${
                 username === 'hamid'
-                  ? 'border-sky-500 bg-sky-50/70 shadow-sm'
-                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/80'
+                  ? 'border-indigo-500/50 bg-indigo-500/10'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10'
               }`}
             >
-              <div className="flex items-center space-x-2.5">
-                <span className="text-2xl">👨‍💼</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👨‍💼</span>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">سیدحمید عقل مندصرمی</div>
-                  <div className="text-[10px] text-slate-500 font-mono">کاربر فعال</div>
+                  <div className="text-xs font-bold text-zinc-200">سیدحمید عقل مندصرمی</div>
+                  <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>
-              {username === 'hamid' && <CheckCircle2 className="w-4 h-4 text-sky-600 flex-shrink-0" />}
+              {username === 'hamid' && <CheckCircle2 className="w-4 h-4 text-indigo-400 flex-shrink-0" />}
             </button>
 
             <button
               type="button"
               onClick={() => handleQuickSelect('fati')}
-              className={`p-3.5 rounded-2xl border text-right transition flex items-center justify-between cursor-pointer ${
+              className={`p-3 rounded-xl border text-right transition-all flex items-center justify-between ${
                 username === 'fati'
-                  ? 'border-emerald-500 bg-emerald-50/70 shadow-sm'
-                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/80'
+                  ? 'border-emerald-500/50 bg-emerald-500/10'
+                  : 'border-white/10 bg-white/5 hover:bg-white/10'
               }`}
             >
-              <div className="flex items-center space-x-2.5">
-                <span className="text-2xl">👩‍⚕️</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl">👩‍⚕️</span>
                 <div>
-                  <div className="text-xs font-bold text-slate-900">فاطمه نیک سرشت</div>
-                  <div className="text-[10px] text-slate-500 font-mono">کاربر فعال</div>
+                  <div className="text-xs font-bold text-zinc-200">فاطمه نیک سرشت</div>
+                  <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>
-              {username === 'fati' && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+              {username === 'fati' && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
             </button>
           </div>
         </div>
 
-        {/* Form Inputs */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">
-              <span>نام کاربری (Username)</span>
-            </label>
-            <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="نام کاربری..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-3 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-indigo-500 focus:bg-white transition"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-700 block">
-              <span>رمز عبور (Password)</span>
-            </label>
-            <div className="relative">
-              <Key className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="• • • • • • • •"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-10 pr-3 text-xs font-semibold text-slate-800 focus:outline-hidden focus:border-indigo-500 focus:bg-white transition font-mono"
-                required
-              />
-            </div>
-          </div>
+          <Input
+            label="نام کاربری"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            leftIcon={<User className="w-4 h-4" />}
+            required
+          />
+          <Input
+            label="رمز عبور"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            leftIcon={<Key className="w-4 h-4" />}
+            required
+            className="font-mono tracking-widest"
+          />
 
           {errorMsg && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-bold">
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-sm text-rose-400 font-medium">
               {errorMsg}
             </div>
           )}
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>{isLoading ? 'در حال ورود...' : 'ورود به سیستم (Login)'}</span>
-            </button>
-          </div>
+          <Button type="submit" isLoading={isLoading} leftIcon={<LogIn className="w-4 h-4" />} className="w-full bg-indigo-600">
+            ورود به سیستم
+          </Button>
         </form>
 
         {currentUser && (
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <span>Currently logged in as: <strong className="text-slate-800">{currentUser.name}</strong></span>
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between text-sm text-zinc-400">
+            <span>وارد شده به عنوان: <strong className="text-zinc-200">{currentUser.name}</strong></span>
             <button
               onClick={() => {
                 localStorage.removeItem('duospend_auth_user');
                 window.location.reload();
               }}
-              className="text-rose-600 font-bold hover:underline"
+              className="text-rose-400 font-bold hover:text-rose-300 transition-colors"
             >
-              خروج (Logout)
+              خروج از حساب
             </button>
           </div>
         )}
       </div>
-    </div>
+    </BottomSheet>
   );
 };

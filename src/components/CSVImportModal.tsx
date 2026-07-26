@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileSpreadsheet, Check, AlertCircle, Sparkles, ArrowRight, Table, Loader2 } from 'lucide-react';
+import { Upload, FileSpreadsheet, Check, Sparkles, Table } from 'lucide-react';
 import { AppSettings, Category, Transaction, AIParsedSheetResult, TransactionType } from '../types';
 import { api } from '../services/api';
-import { normalizePersianNumbers } from '../utils/formatters';
+import { BottomSheet } from './ui/BottomSheet';
+import { Button } from './ui/Button';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -15,7 +16,8 @@ interface ParsedRow {
   date: string;
   title: string;
   amount: number;
-  type: TransactionType;  paidBy: string;
+  type: TransactionType;
+  paidBy: string;
   category: Category;
   notes?: string;
   vendor?: string;
@@ -41,8 +43,6 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  if (!isOpen) return null;
-
   const partnerA = settings.partnerA;
   const partnerB = settings.partnerB;
 
@@ -55,7 +55,6 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
     reader.onload = (event) => {
       const result = event.target?.result as string;
       setFileBase64(result);
-      // Also try text parsing if plaintext
       if (file.name.endsWith('.csv') || file.name.endsWith('.txt') || file.name.endsWith('.tsv')) {
         const textReader = new FileReader();
         textReader.onload = (txEvent) => {
@@ -84,9 +83,7 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
         pastedText: rawText || undefined,
       });
 
-      if (result.notes) {
-        setAiNote(result.notes);
-      }
+      if (result.notes) setAiNote(result.notes);
 
       const rows: ParsedRow[] = result.transactions.map((tx) => {
         const amount = Number(tx.amount) || 0;
@@ -101,7 +98,8 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
           date: tx.date || new Date().toISOString().split('T')[0],
           title: tx.title || 'Imported Transaction',
           amount,
-          type: txType,          paidBy: tx.paidBy === partnerB.id ? partnerB.id : partnerA.id,
+          type: txType,
+          paidBy: tx.paidBy === partnerB.id ? partnerB.id : partnerA.id,
           category: (tx.category as Category) || (txType === 'TRANSFER' ? 'Internal Transfer' : 'Groceries'),
           notes: tx.notes || `AI Sheet Import (${result.currencyDetected || 'Tomans'})`,
           vendor: tx.vendor,
@@ -111,22 +109,18 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
       });
 
       setParsedRows(rows);
-      setImportStatus(`Gemini processed ${result.totalRowsProcessed || rows.length} rows! Review transactions below.`);
+      setImportStatus(`تعداد ${result.totalRowsProcessed || rows.length} ردیف با موفقیت پردازش شد!`);
     } catch (err: any) {
       console.error('Gemini sheet parse failed:', err);
-      setImportStatus(`AI Error: ${err.message || 'Failed to parse sheet with Gemini. Try standard CSV fallback.'}`);
+      setImportStatus(`خطا در پردازش هوشمند: ${err.message}`);
     } finally {
       setIsAiProcessing(false);
     }
   };
 
-  // Helper utility to divide amounts by 10 (convert Rials to Tomans)
   const divideAmountsByTen = () => {
     setParsedRows((prev) =>
-      prev.map((row) => ({
-        ...row,
-        amount: Math.round(row.amount / 10),
-      }))
+      prev.map((row) => ({ ...row, amount: Math.round(row.amount / 10) }))
     );
     setImportStatus('تمام مبالغ بر ۱۰ تقسیم شدند (تبدیل ریال به تومان انجام شد).');
   };
@@ -139,204 +133,146 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
     setImportStatus(null);
 
     try {
-      const formattedForApi: Omit<Transaction, 'id' | 'createdAt'>[] = validItems.map((item) => {
-        return {
-          title: item.title,
-          amount: item.amount,
-          type: item.type,
-          category: item.category,
-          paidBy: item.paidBy,
-          date: item.date,
-          vendor: item.vendor,
-          notes: item.notes || 'Imported via Gemini AI Sheet Importer',
-        };
-      });
+      const formattedForApi: Omit<Transaction, 'id' | 'createdAt'>[] = validItems.map((item) => ({
+        title: item.title,
+        amount: item.amount,
+        type: item.type,
+        category: item.category,
+        paidBy: item.paidBy,
+        date: item.date,
+        vendor: item.vendor,
+        notes: item.notes || 'Imported via Gemini AI Sheet Importer',
+      }));
 
       const res = await api.batchAddTransactions(formattedForApi);
-      setImportStatus(`Successfully imported ${res.count} transactions to ledger!`);
+      setImportStatus(`تعداد ${res.count} تراکنش با موفقیت ذخیره شد!`);
       setTimeout(() => {
         onImportComplete();
         onClose();
       }, 1200);
     } catch (err: any) {
-      console.error('Failed batch import:', err);
-      setImportStatus(`Error: ${err.message || 'Import failed'}`);
+      setImportStatus(`خطا در ذخیره سازی: ${err.message}`);
     } finally {
       setIsImporting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 space-y-6 my-8">
-        {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-gradient-to-br from-emerald-50 to-teal-100 text-emerald-700 rounded-2xl border border-emerald-200/60 shadow-xs">
-              <FileSpreadsheet className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-extrabold text-slate-900">ورود هوشمند اکسل و شیت (Gemini AI Sheet Import)</h2>
-                <span className="bg-indigo-100 text-indigo-700 text-[10px] font-extrabold px-2 py-0.5 rounded-full flex items-center space-x-1">
-                  <Sparkles className="w-3 h-3 text-indigo-600" />
-                  <span>AI Powered</span>
-                </span>
-              </div>
-              <p className="text-xs text-slate-500">Upload Excel (.xlsx, .xls, .csv) or paste rows and Gemini will organize it automatically</p>
-            </div>
+    <BottomSheet isOpen={isOpen} onClose={onClose} title="ورود هوشمند فایل اکسل" fullHeight>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-3 text-zinc-400 text-sm">
+          <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
+            <FileSpreadsheet className="w-5 h-5" />
           </div>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 p-1.5 rounded-xl hover:bg-slate-100 transition"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <p>فایل اکسل یا لیست متنی را بدهید تا Gemini بصورت خودکار دسته‌بندی و ثبت کند.</p>
         </div>
 
-        {/* Mode Tabs */}
-        <div className="flex space-x-3 border-b border-slate-200">
+        {/* Tabs */}
+        <div className="flex space-x-2 border-b border-white/5 pb-2">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`pb-2.5 text-xs font-bold transition border-b-2 ${
-              activeTab === 'upload'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+            className={`pb-1 text-sm font-semibold transition-all ${
+              activeTab === 'upload' ? 'text-indigo-400 border-b-2 border-indigo-500' : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            فایل اکسل / Excel or CSV File (.xlsx, .csv)
+            آپلود فایل (Excel/CSV)
           </button>
           <button
             onClick={() => setActiveTab('paste')}
-            className={`pb-2.5 text-xs font-bold transition border-b-2 ${
-              activeTab === 'paste'
-                ? 'border-emerald-600 text-emerald-700'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+            className={`pb-1 text-sm font-semibold transition-all ${
+              activeTab === 'paste' ? 'text-indigo-400 border-b-2 border-indigo-500' : 'text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            کپی و پیست متنی / Paste Sheet Rows
+            کپی پیست متن
           </button>
         </div>
 
-        {/* Tab 1: File Upload */}
-        {activeTab === 'upload' && (
+        {activeTab === 'upload' ? (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-300 hover:border-emerald-500 bg-slate-50/70 hover:bg-emerald-50/30 rounded-2xl p-8 text-center cursor-pointer transition space-y-2"
+            className="border-2 border-dashed border-white/20 hover:border-indigo-500/50 rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all bg-white/5 hover:bg-white/10 group"
           >
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept=".xlsx,.xls,.csv,.txt,.tsv"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Upload className="w-10 h-10 text-emerald-600 mx-auto" />
-            <p className="text-xs font-bold text-slate-800">
-              {fileName ? `انتخاب شده: ${fileName}` : 'برای انتخاب فایل اکسل کلیک کنید (Click or Drag Excel File)'}
+            <input type="file" ref={fileInputRef} accept=".xlsx,.xls,.csv,.txt,.tsv" onChange={handleFileUpload} className="hidden" />
+            <div className="p-4 bg-indigo-500/10 rounded-full text-indigo-400 group-hover:scale-110 transition-transform duration-300 mb-4">
+              <Upload className="w-8 h-8" />
+            </div>
+            <p className="text-sm font-semibold text-zinc-200">
+              {fileName ? `فایل انتخاب شده: ${fileName}` : 'کلیک برای انتخاب فایل'}
             </p>
-            <p className="text-[11px] text-slate-400">
-              پشتیبانی از فایل‌های .xlsx, .xls, .csv با ستون‌های فارسی یا انگلیسی
-            </p>
+            <p className="text-xs text-zinc-500 mt-2">پشتیبانی از فرمت‌های xlsx, csv</p>
           </div>
-        )}
-
-        {/* Tab 2: Copy Paste */}
-        {activeTab === 'paste' && (
+        ) : (
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 block">
-              متن جدول اکسل یا گوگل شیت را کپی و پیست کنید:
-            </label>
+            <label className="text-sm font-medium text-zinc-300">متن کپی شده از اکسل:</label>
             <textarea
               rows={5}
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
-              placeholder={`تاریخ\tشرح\tمبلغ\tپرداخت کننده\tدسته\n1405/05/01\tخریدهای سوپرمارکت\t1200000\tحمید\tGroceries\n1405/05/02\tکافه و رستوران\t450000\tفاطمه\tDining & Takeout`}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs font-mono text-slate-800 focus:outline-hidden focus:border-emerald-500"
+              placeholder="ردیف‌های اکسل را اینجا Paste کنید..."
+              className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-zinc-100 placeholder-zinc-600 text-sm focus:outline-none focus:border-indigo-500 font-mono resize-y"
             />
           </div>
         )}
 
-        {/* AI Process Trigger Button */}
-        <div className="flex justify-end">
-          <button
-            onClick={handleGeminiAutoParse}
-            disabled={isAiProcessing || (!fileBase64 && !rawText.trim())}
-            className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-bold text-xs px-6 py-3 rounded-2xl shadow-md transition disabled:opacity-50 cursor-pointer"
-          >
-            {isAiProcessing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Gemini در حال خواندن و طبقه‌بندی هوشمند...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>خوانش و استخراج هوشمند با جمینای (Gemini AI Read Sheet)</span>
-              </>
-            )}
-          </button>
-        </div>
+        <Button
+          onClick={handleGeminiAutoParse}
+          disabled={isAiProcessing || (!fileBase64 && !rawText.trim())}
+          isLoading={isAiProcessing}
+          leftIcon={<Sparkles className="w-4 h-4 text-amber-300" />}
+          className="w-full bg-indigo-600 border-indigo-500/50"
+        >
+          تحلیل هوشمند با Gemini
+        </Button>
 
-        {/* AI Insight Notes */}
         {aiNote && (
-          <div className="p-3.5 bg-indigo-50/80 border border-indigo-200 rounded-2xl text-xs text-indigo-900 flex items-start space-x-2">
-            <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
-            <span><strong>Gemini Analysis Note:</strong> {aiNote}</span>
+          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-sm text-indigo-300 flex items-start gap-2">
+            <Sparkles className="w-5 h-5 flex-shrink-0" />
+            <span>{aiNote}</span>
           </div>
         )}
 
         {/* Parsed Preview Table */}
         {parsedRows.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-xs font-bold text-slate-800 flex items-center space-x-2">
-                <Table className="w-4 h-4 text-emerald-600" />
-                <span>پیش‌نمایش تراکنش‌های استخراج‌شده ({parsedRows.filter((r) => r.isValid).length} آماده ثبت)</span>
+          <div className="space-y-4 pt-4 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-emerald-400 flex items-center gap-2">
+                <Table className="w-4 h-4" />
+                تراکنش‌های استخراج شده ({parsedRows.filter(r => r.isValid).length})
               </span>
-
-              {/* Quick Batch Transformations */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={divideAmountsByTen}
-                  className="px-2.5 py-1 text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200/80 rounded-lg transition cursor-pointer shadow-2xs"
-                  title="Divide all amounts by 10 to strip trailing zero from Rials"
-                >
-                  ✂️ ÷ ۱۰ (تبدیل ریال به تومان)
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={divideAmountsByTen}
+                className="px-3 py-1.5 text-xs font-semibold bg-white/5 hover:bg-white/10 text-zinc-300 border border-white/10 rounded-lg transition-colors shadow-sm"
+              >
+                ✂️ ÷ ۱۰ (ریال به تومان)
+              </button>
             </div>
 
-            <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-2xl">
+            <div className="overflow-x-auto rounded-xl border border-white/10 bg-black/20 max-h-64 no-scrollbar">
               <table className="w-full text-right text-xs">
-                <thead className="bg-slate-100 text-slate-600 font-bold sticky top-0">
+                <thead className="bg-white/5 text-zinc-400 font-semibold sticky top-0 backdrop-blur-md">
                   <tr>
-                    <th className="p-2.5">تاریخ</th>
-                    <th className="p-2.5">عنوان / شرح</th>
-                    <th className="p-2.5">مبلغ ({settings.currencySymbol})</th>
-                    <th className="p-2.5">پرداخت‌کننده</th>
-                    <th className="p-2.5">دسته‌بندی</th>
-                    <th className="p-2.5">وضعیت</th>
+                    <th className="p-3 font-medium">تاریخ</th>
+                    <th className="p-3 font-medium">عنوان</th>
+                    <th className="p-3 font-medium">مبلغ</th>
+                    <th className="p-3 font-medium">دسته</th>
+                    <th className="p-3 font-medium">وضعیت</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-white/5">
                   {parsedRows.map((row, idx) => (
-                    <tr key={idx} className={row.isValid ? 'hover:bg-slate-50' : 'bg-rose-50/60'}>
-                      <td className="p-2.5 font-mono text-slate-600">{row.date}</td>
-                      <td className="p-2.5 font-medium text-slate-900 truncate max-w-[160px]">{row.title}</td>
-                      <td className="p-2.5 font-mono font-bold text-emerald-700">{row.amount.toLocaleString()}</td>
-                      <td className="p-2.5 font-medium">
-                        {row.paidBy === partnerA.id ? partnerA.name : partnerB.name}
-                      </td>
-                      <td className="p-2.5 text-slate-600">{row.category}</td>
-                      <td className="p-2.5">
+                    <tr key={idx} className={row.isValid ? 'text-zinc-300' : 'bg-rose-500/10 text-rose-300'}>
+                      <td className="p-3 font-mono text-zinc-400">{row.date}</td>
+                      <td className="p-3 max-w-[120px] truncate">{row.title}</td>
+                      <td className="p-3 font-mono font-bold text-emerald-400/90">{row.amount.toLocaleString()}</td>
+                      <td className="p-3 text-zinc-400">{row.category}</td>
+                      <td className="p-3">
                         {row.isValid ? (
-                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                            آماده ثبت
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md">
+                            معتبر
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold text-rose-700 bg-rose-100 px-2.5 py-1 rounded-full">
+                          <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-1 rounded-md">
                             نامعتبر
                           </span>
                         )}
@@ -349,41 +285,29 @@ export const CSVImportModal: React.FC<CSVImportModalProps> = ({
           </div>
         )}
 
-        {/* Status Message */}
         {importStatus && (
-          <div
-            className={`p-3.5 rounded-2xl text-xs font-bold ${
-              importStatus.startsWith('Error') || importStatus.startsWith('AI Error')
-                ? 'bg-rose-100 text-rose-800'
-                : 'bg-emerald-100 text-emerald-800'
-            }`}
-          >
+          <div className={`p-3 rounded-xl text-sm font-medium ${
+            importStatus.includes('خطا') ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'
+          }`}>
             {importStatus}
           </div>
         )}
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
-          <button
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl text-slate-500 hover:text-slate-800 text-xs font-semibold hover:bg-slate-100 transition cursor-pointer"
-          >
+        <div className="pt-2 flex gap-3">
+          <Button variant="ghost" onClick={onClose} className="flex-1">
             انصراف
-          </button>
-          <button
-            onClick={handleBatchImport}
-            disabled={parsedRows.filter((r) => r.isValid).length === 0 || isImporting}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-6 py-2.5 rounded-xl transition shadow-md disabled:opacity-50 cursor-pointer"
+          </Button>
+          <Button 
+            onClick={handleBatchImport} 
+            disabled={parsedRows.filter(r => r.isValid).length === 0 || isImporting} 
+            isLoading={isImporting}
+            className="flex-[2] bg-emerald-600 hover:bg-emerald-500 border-emerald-500/50"
           >
-            <Check className="w-4 h-4" />
-            <span>
-              {isImporting
-                ? 'در حال ذخیره...'
-                : `تایید و ورود ${parsedRows.filter((r) => r.isValid).length} تراکنش به دفترچه`}
-            </span>
-          </button>
+            <Check className="w-4 h-4 mr-2" />
+            ذخیره {parsedRows.filter(r => r.isValid).length} تراکنش
+          </Button>
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 };
