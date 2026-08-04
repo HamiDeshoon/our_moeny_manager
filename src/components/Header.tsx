@@ -242,18 +242,18 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Mobile Quick Add Buttons */}
           <div className="flex lg:hidden items-center space-x-1 sm:space-x-1.5 rtl:space-x-reverse pl-2 sm:pl-3 rtl:pl-0 rtl:pr-2 sm:rtl:pr-3 border-l rtl:border-l-0 rtl:border-r border-white/10 py-2 shrink-0">
             <button
-              onClick={onOpenSettings}
-              className="p-1.5 sm:p-2 bg-black/40 text-zinc-400 hover:text-zinc-200 rounded-md border border-white/10 cursor-pointer"
-              title="Settings"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            <button
               onClick={onOpenVoiceModal}
               className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20 cursor-pointer"
               title="Voice Memo"
             >
               <Mic className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onOpenReceiptModal}
+              className="p-1.5 sm:p-2 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20 cursor-pointer"
+              title="Scan Receipt with Gemini Vision"
+            >
+              <Camera className="w-4 h-4" />
             </button>
           </div>
         </div>

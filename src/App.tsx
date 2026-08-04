@@ -120,6 +120,7 @@ export default function App() {
 
   // Handlers with haptic feedback
   const handleSaveTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
     if (editingTransaction) {
       await api.updateTransaction(editingTransaction.id, txData);
@@ -131,36 +132,42 @@ export default function App() {
   }, [editingTransaction]);
 
   const handleDeleteTransaction = useCallback(async (id: string) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteTransaction(id);
     await loadData();
   }, []);
 
   const handleUpdateBudgets = useCallback(async (newBudgets: Budget[]) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
     await api.updateBudgets(newBudgets);
     await loadData();
   }, []);
 
   const handleToggleBillPaid = useCallback(async (id: string, isPaid: boolean) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
     await api.toggleBillPaid(id, isPaid);
     await loadData();
   }, []);
 
   const handleAddBill = useCallback(async (billData: Omit<Bill, 'id'>) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
     await api.addBill(billData);
     await loadData();
   }, []);
 
   const handleDeleteBill = useCallback(async (id: string) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteBill(id);
     await loadData();
   }, []);
 
   const handleUpdateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
+    if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
     await api.updateSettings(newSettings);
     await loadData();
@@ -202,6 +209,8 @@ export default function App() {
     );
   }
 
+  const isAuthed = Boolean(currentUser);
+
   return (
     <div
       dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
@@ -236,10 +245,10 @@ export default function App() {
         settings={activeSettings}
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
-        onOpenAddExpense={() => { setEditingTransaction(null); setIsAddExpenseOpen(true); }}
-        onOpenVoiceModal={() => setIsVoiceModalOpen(true)}
-        onOpenReceiptModal={() => setIsReceiptModalOpen(true)}
-        onOpenCSVImport={() => setIsCSVImportOpen(true)}
+        onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
+        onOpenVoiceModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsVoiceModalOpen(true); }}
+        onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }}
+        onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }}
         onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
         currentUser={currentUser}
@@ -247,6 +256,15 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
       />
+
+      {!isAuthed && (
+        <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-3 text-center">
+          <p className="text-sm text-amber-400 font-medium">
+            ⚠️ شما وارد نشده‌اید. برای افزودن، حذف یا تغییر اطلاعات، ابتدا وارد شوید.
+            <button onClick={() => setIsLoginModalOpen(true)} className="mr-2 underline font-bold text-amber-300 hover:text-amber-200">ورود</button>
+          </p>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <SummaryCards summary={activeSummary} settings={activeSettings} />
@@ -261,7 +279,7 @@ export default function App() {
                   settings={activeSettings}
                   onEditTransaction={(tx) => { setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
                   onDeleteTransaction={handleDeleteTransaction}
-                  onOpenAddExpense={() => { setEditingTransaction(null); setIsAddExpenseOpen(true); }}
+                  onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
                 />
               </motion.div>
             )}
@@ -273,7 +291,7 @@ export default function App() {
                   settings={activeSettings}
                   onEditTransaction={(tx) => { setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
                   onDeleteTransaction={handleDeleteTransaction}
-                  onOpenAddExpense={() => { setEditingTransaction(null); setIsAddExpenseOpen(true); }}
+                  onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
                 />
               </motion.div>
             )}
@@ -298,7 +316,7 @@ export default function App() {
 
             {activeTab === 'tools' && (
               <motion.div key="tools" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <DataToolsPanel onOpenAddExpense={() => setIsAddExpenseOpen(true)} onOpenCSVImport={() => setIsCSVImportOpen(true)} onOpenReceiptModal={() => setIsReceiptModalOpen(true)} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
+                <DataToolsPanel onOpenAddExpense={() => setIsAddExpenseOpen(true)} onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }} onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
               </motion.div>
             )}
           </AnimatePresence>

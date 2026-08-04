@@ -5,6 +5,32 @@ import { analyzeSpendingInsights, parseExcelOrSheetWithGemini, parseVoiceMemo, s
 
 export const apiRouter = Router();
 
+// --- AUTH MIDDLEWARE ---
+// Simple token-based auth. The frontend stores the user object in localStorage
+// after login. We check a header "x-auth-user" containing the username.
+// This prevents unauthenticated users from adding/deleting data.
+const authMiddleware = (req: any, res: any, next: any) => {
+  // Skip auth for login and health endpoints
+  if (req.path === '/auth/login' || req.path === '/health') {
+    return next();
+  }
+  const authUser = req.headers['x-auth-user'] as string;
+  if (!authUser) {
+    return res.status(401).json({ error: 'Authentication required. Please log in first.' });
+  }
+  // Validate the user is one of our known users
+  const knownUsers = ['hamid', 'fati', 'fatemeh'];
+  const cleanUser = authUser.toLowerCase().trim();
+  if (!knownUsers.includes(cleanUser)) {
+    return res.status(401).json({ error: 'Invalid user session. Please log in again.' });
+  }
+  req.authUser = cleanUser;
+  next();
+};
+
+// Apply auth middleware to all routes
+apiRouter.use(authMiddleware);
+
 // --- AUTHENTICATION ---
 apiRouter.post('/auth/login', (req, res) => {
   try {

@@ -56,8 +56,16 @@ export function isOfflineMode(): boolean {
   return offlineMode;
 }
 
+function getAuthUser(): string | null {
+  try {
+    const user = JSON.parse(localStorage.getItem('duospend_auth_user') || 'null');
+    return user ? user.username : null;
+  } catch { return null; }
+}
+
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
   const customKey = getSavedCustomApiKey();
+  const authUser = getAuthUser();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> || {}),
@@ -84,6 +92,10 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
 
   const data = await res.json();
   if (!res.ok) {
+    if (res.status === 401) {
+      // Session expired or not logged in — clear stale auth and redirect to login
+      try { localStorage.removeItem('duospend_auth_user'); } catch {}
+    }
     throw new Error(data.error || `HTTP ${res.status}: Request failed`);
   }
   // A successful JSON response means the backend is alive.
@@ -364,6 +376,7 @@ export const api = {
       () =>
         fetchJSON<{ success: boolean; user: AuthUser }>('/auth/login', {
           method: 'POST',
+          headers: { 'x-auth-user': username },
           body: JSON.stringify({ username, password: pass }),
         }),
       () => offlineDb.login(username, pass),

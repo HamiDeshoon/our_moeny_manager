@@ -640,22 +640,22 @@ export const offlineDb = {
     const cleanUser = (username || '').toString().trim().toLowerCase();
     const cleanPass = (password || '').toString().trim();
 
-    if (cleanUser === 'user1' && cleanPass === 'password123') {
+    if (cleanUser === 'hamid' && cleanPass === '19981998') {
       return {
         success: true,
         user: {
-          username: 'user1',
+          username: 'hamid',
           name: 'کاربر اول',
           partnerId: 'partner_a',
           avatar: '👨‍💼',
         },
       };
     }
-    if (cleanUser === 'user2' && cleanPass === 'password456') {
+    if ((cleanUser === 'fati' || cleanUser === 'fatemeh') && cleanPass === '13771377') {
       return {
         success: true,
         user: {
-          username: 'user2',
+          username: 'fati',
           name: 'کاربر دوم',
           partnerId: 'partner_b',
           avatar: '👩‍⚕️',
