@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, HTMLMotionProps } from 'motion/react';
 
-interface ButtonProps extends HTMLMotionProps<"button"> {
+interface ButtonProps extends Omit<HTMLMotionProps<"button">, 'children'> {
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function Button({ 
