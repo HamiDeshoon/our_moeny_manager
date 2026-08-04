@@ -17,9 +17,9 @@ export function TransactionItem({ tx, settings, onEdit, onDelete }: TransactionI
   const getPayerBadge = (paidBy: string) => {
     if (paidBy === settings.partnerA.id) {
       return (
-        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+        <span className="inline-flex items-center gap-0.5 sm:space-x-1 px-1.5 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
           <span>{settings.partnerA.avatar}</span>
-          <span>{settings.partnerA.name}</span>
+          <span className="truncate max-w-[60px] sm:max-w-none">{settings.partnerA.name}</span>
         </span>
       );
     }
@@ -32,83 +32,79 @@ export function TransactionItem({ tx, settings, onEdit, onDelete }: TransactionI
   };
 
   return (
-    <div className="p-4 hover:bg-white/5 transition-colors flex items-center justify-between gap-4 group border-b border-white/5 last:border-0">
-      <div className="flex items-start gap-3.5 min-w-0">
-        <div
-          className={`p-2.5 rounded-xl flex-shrink-0 mt-0.5 border ${
-            tx.type === 'EXPENSE'
-              ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-              : tx.type === 'TRANSFER'
-              ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-              : tx.type === 'INCOME'
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-              : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-          }`}
-        >
-          {tx.type === 'EXPENSE' ? (
-            <ArrowRightLeft className="w-4 h-4" />
-          ) : tx.type === 'TRANSFER' ? (
-            <ArrowRightLeft className="w-4 h-4" />
-          ) : tx.type === 'INCOME' ? (
-            <ArrowDownRight className="w-4 h-4" />
-          ) : (
-            <ArrowUpRight className="w-4 h-4" />
-          )}
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h4 className="text-sm font-bold text-zinc-100 truncate">{tx.title}</h4>
-            {getPayerBadge(tx.paidBy)}
-            <span className="text-[10px] bg-white/5 text-zinc-400 px-2 py-0.5 rounded-md border border-white/10 font-medium">
-              {tx.type === 'TRANSFER' ? 'انتقال بودجه' : tx.category}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3 text-xs text-zinc-500 flex-wrap">
-            <span className="font-mono text-zinc-400">
-              {settings.useJalaliDate || isPersianContext ? formatJalaliDate(tx.date) : tx.date}
-            </span>
-            {tx.vendor && <span className="truncate">فروشگاه: {tx.vendor}</span>}
-          </div>
-
-          {tx.notes && (
-            <p className="text-[11px] text-zinc-500 truncate mt-1 italic">"{tx.notes}"</p>
-          )}
-        </div>
+    <div className="px-3 py-2.5 sm:px-4 sm:py-3.5 hover:bg-white/5 transition-colors flex items-center gap-2.5 sm:gap-4 group border-b border-white/5 last:border-0">
+      {/* Type icon - smaller on mobile */}
+      <div
+        className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 border ${
+          tx.type === 'EXPENSE'
+            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+            : tx.type === 'TRANSFER'
+            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+            : tx.type === 'INCOME'
+            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+        }`}
+      >
+        {tx.type === 'EXPENSE' ? (
+          <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        ) : tx.type === 'TRANSFER' ? (
+          <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        ) : tx.type === 'INCOME' ? (
+          <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        ) : (
+          <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        )}
       </div>
 
-      <div className="flex items-center gap-4 flex-shrink-0">
-        <div className="text-right">
-          <span
-            className={`text-base sm:text-lg font-bold font-mono block ${
-              tx.type === 'EXPENSE'
-                ? 'text-rose-400'
-                : tx.type === 'TRANSFER'
-                ? 'text-indigo-400'
-                : tx.type === 'INCOME'
-                ? 'text-emerald-400'
-                : 'text-zinc-100'
-            }`}
-          >
-            {formatMoney(tx.amount, symbol)}
+      {/* Title + meta - takes available space, truncates properly */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <h4 className="text-xs sm:text-sm font-bold text-zinc-100 truncate min-w-0 flex-1">{tx.title}</h4>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-xs text-zinc-500">
+          {getPayerBadge(tx.paidBy)}
+          <span className="hidden sm:inline text-[10px] bg-white/5 text-zinc-400 px-1.5 py-0.5 rounded-md border border-white/10 font-medium truncate max-w-[100px]">
+            {tx.type === 'TRANSFER' ? 'انتقال بودجه' : tx.category}
+          </span>
+          <span className="font-mono text-zinc-400 whitespace-nowrap">
+            {settings.useJalaliDate || isPersianContext ? formatJalaliDate(tx.date) : tx.date}
           </span>
         </div>
+        {tx.notes && (
+          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 italic">"{tx.notes}"</p>
+        )}
+      </div>
 
-        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Amount + actions - right aligned, compact */}
+      <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+        <span
+          className={`text-sm sm:text-base font-bold font-mono whitespace-nowrap ${
+            tx.type === 'EXPENSE'
+              ? 'text-rose-400'
+              : tx.type === 'TRANSFER'
+              ? 'text-indigo-400'
+              : tx.type === 'INCOME'
+              ? 'text-emerald-400'
+              : 'text-zinc-100'
+          }`}
+        >
+          {formatMoney(tx.amount, symbol)}
+        </span>
+
+        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onEdit(tx)}
-            className="p-2 text-zinc-500 hover:text-indigo-400 hover:bg-white/5 rounded-xl transition-colors"
+            className="p-1 sm:p-2 text-zinc-500 hover:text-indigo-400 hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
             title="ویرایش"
           >
-            <Edit3 className="w-4 h-4" />
+            <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
           <button
             onClick={() => onDelete(tx.id)}
-            className="p-2 text-zinc-500 hover:text-rose-400 hover:bg-white/5 rounded-xl transition-colors"
+            className="p-1 sm:p-2 text-zinc-500 hover:text-rose-400 hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
             title="حذف"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </div>
       </div>

@@ -29,7 +29,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-5 relative overflow-hidden shadow-sm"
+          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 relative overflow-hidden shadow-sm"
         >
           <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500" />
           <div className="flex items-center justify-between">
@@ -41,12 +41,12 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
             </div>
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl sm:text-3xl font-bold text-white">
+            <span className="text-xl sm:text-3xl font-bold text-white">
               {formatMoney(totalSpent, symbol)}
             </span>
           </div>
           <div className="mt-3">
-            <div className="flex justify-between text-[11px] text-zinc-500 mb-1 font-medium">
+            <div className="flex justify-between text-[10px] sm:text-[11px] text-zinc-500 mb-1 font-medium">
               <span>{settings.partnerA.name} ({partnerAPercent}%)</span>
               <span>{settings.partnerB.name} ({partnerBPercent}%)</span>
             </div>
@@ -73,13 +73,13 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden group"
+          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 shadow-sm relative overflow-hidden group"
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 duration-500" style={{ backgroundColor: settings.partnerA.color }} />
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1.5 sm:space-x-2 min-w-0">
               <span className="text-lg">{settings.partnerA.avatar}</span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 truncate">
                 پرداختی {settings.partnerA.name}
               </span>
             </div>
@@ -89,7 +89,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
             />
           </div>
           <div className="mt-2 relative z-10">
-            <span className="text-2xl sm:text-3xl font-bold text-white">
+            <span className="text-xl sm:text-3xl font-bold text-white">
               {formatMoney(summary.partnerATotalPaid, symbol)}
             </span>
           </div>
@@ -99,13 +99,13 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-sm relative overflow-hidden group"
+          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 shadow-sm relative overflow-hidden group"
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 duration-500" style={{ backgroundColor: settings.partnerB.color }} />
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1.5 sm:space-x-2 min-w-0">
               <span className="text-lg">{settings.partnerB.avatar}</span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 truncate">
                 پرداختی {settings.partnerB.name}
               </span>
             </div>
@@ -115,7 +115,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
             />
           </div>
           <div className="mt-2 relative z-10">
-            <span className="text-2xl sm:text-3xl font-bold text-white">
+            <span className="text-xl sm:text-3xl font-bold text-white">
               {formatMoney(summary.partnerBTotalPaid, symbol)}
             </span>
           </div>
