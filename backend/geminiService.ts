@@ -200,7 +200,7 @@ function validateSheetResult(data: AIParsedSheetResult): string | null {
 // ──────────────────────────────────────────────
 
 export async function parseVoiceMemo(
-  transcript: string,
+  input: string | { audioBase64: string; mimeType: string },
   partnerA: { id: string; name: string },
   partnerB: { id: string; name: string },
   currencySymbol: string = 'تومان',
@@ -208,14 +208,16 @@ export async function parseVoiceMemo(
 ): Promise<AIParsedVoice> {
   const ai = getGeminiClient(customKey);
   const todayStr = new Date().toISOString().split('T')[0];
-  const cleanedTranscript = normalizePersianInput(transcript);
+  const isAudio = typeof input !== 'string';
+  const transcript = isAudio ? '' : (input as string);
+  const cleanedTranscript = isAudio ? '' : normalizePersianInput(transcript);
 
   const prompt = `
 You are an intelligent household expense & budget assistant fluent in both PERSIAN (Farsi) and ENGLISH for a couple (${partnerA.name} [id: ${partnerA.id}] and ${partnerB.name} [id: ${partnerB.id}]).
 Analyze the input memo and detect the user's INTENTION (actionType):
 
-ORIGINAL INPUT: "${transcript}"
-CLEANED TRANSCRIPT: "${cleanedTranscript}"
+${isAudio ? 'The user has provided an AUDIO recording of their voice. Please listen and parse the spoken expense information.' : `ORIGINAL INPUT: "${transcript}"
+CLEANED TRANSCRIPT: "${cleanedTranscript}"`}
 
 CONTEXT:
 - Today's date is: ${todayStr}
@@ -265,9 +267,15 @@ Output valid JSON matching the schema.
 
   return callGeminiWithRetry<AIParsedVoice>(
     async () => {
+      let contents: any = prompt;
+      if (isAudio) {
+        const audioData = input as { audioBase64: string; mimeType: string };
+        const cleanB64 = audioData.audioBase64.replace(/^data:audio\/\w+;base64,/, '').replace(/^data:video\/\w+;base64,/, '');
+        contents = { parts: [{ inlineData: { data: cleanB64, mimeType: audioData.mimeType } }, { text: prompt }] };
+      }
       const response = await ai.models.generateContent({
         model: MODEL,
-        contents: prompt,
+        contents,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
       const parsed = JSON.parse(response.text || '{}') as AIParsedVoice;

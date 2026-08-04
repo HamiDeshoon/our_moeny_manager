@@ -34,35 +34,19 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Prevent iOS rubber-band scroll */
+  overscroll-behavior-y: none;
 }
 
 /* Custom sleek scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
 
 /* Hide scrollbars while keeping scroll capability */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Premium utility classes */
 .glass-panel {
@@ -80,7 +64,6 @@ body {
   box-shadow: var(--shadow-premium-sm);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .premium-card:hover {
   border-color: var(--color-border-strong);
   box-shadow: var(--shadow-premium-md);
@@ -92,17 +75,13 @@ body {
   color: var(--color-text-primary);
   transition: all 0.2s ease;
 }
-
 .premium-input:focus {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--color-brand-primary);
   box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
   outline: none;
 }
-
-.premium-input::placeholder {
-  color: var(--color-text-tertiary);
-}
+.premium-input::placeholder { color: var(--color-text-tertiary); }
 
 .text-gradient-brand {
   background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
@@ -111,7 +90,54 @@ body {
   color: transparent;
 }
 
-/* Bottom Sheet safe area constraints */
-.safe-area-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 1rem);
+/* Safe area insets for iOS notch / Dynamic Island / home indicator */
+.safe-area-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+.safe-area-left { padding-left: env(safe-area-inset-left, 0px); }
+.safe-area-right { padding-right: env(safe-area-inset-right, 0px); }
+.safe-area-x { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.safe-area-y { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.safe-area-all { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+
+/* Pull-to-refresh indicator */
+.ptr-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Smooth tab transitions */
+.tab-enter { animation: tabFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer loading animation */
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* iOS-native active state for buttons/tappable elements */
+.tap-scale {
+  transition: transform 0.1s ease;
+}
+.tap-scale:active {
+  transform: scale(0.96);
+}
+
+/* Smooth scroll with momentum */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }

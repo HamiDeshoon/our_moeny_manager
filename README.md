@@ -145,3 +145,56 @@ The application runs on port `3000` (or the port defined by `process.env.PORT`).
 
 ## 📄 License
 Apache-2.0 License
+
+---
+
+## 🚀 Deployment Guide (Multi-Device Sync + PWA)
+
+### Quick Deploy on Render
+
+1. **Fork/clone** this repo to your GitHub.
+2. Go to [render.com](https://render.com) → New → Web Service → Connect your repo.
+3. Render will auto-detect `render.yaml` — just click **Apply**.
+4. Set environment variables in Render dashboard:
+   - `GEMINI_API_KEY` — Your Gemini AI key from [Google AI Studio](https://aistudio.google.com/app/apikey)
+   - `DATABASE_URL` — PostgreSQL connection string (see below)
+5. Deploy! You'll get a URL like `https://duospend.onrender.com`
+
+### Database Setup (for multi-device sync)
+
+Without a database, data is stored in a local JSON file and **won't sync between phones**. To fix this:
+
+**Option A: Neon (Recommended, Free)**
+1. Go to [neon.tech](https://neon.tech) → Create free PostgreSQL database
+2. Copy the connection string
+3. Set it as `DATABASE_URL` in Render environment variables
+
+**Option B: Supabase (Free)**
+1. Go to [supabase.com](https://supabase.com) → Create project
+2. Settings → Database → Connection string
+3. Set it as `DATABASE_URL` in Render environment variables
+
+The app auto-creates all tables on first boot — no manual migration needed.
+
+### iPhone PWA Installation
+
+1. Open the app URL in **Safari** on your iPhone
+2. Tap the **Share** button (square with arrow)
+3. Select **"Add to Home Screen"**
+4. Tap **Add** — the app now appears on your home screen like a native app
+5. Launch from home screen for full-screen, standalone experience
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes (for sync) | PostgreSQL connection string |
+| `GEMINI_API_KEY` | Yes (for AI) | Google Gemini AI API key |
+| `APP_URL` | No | The app's public URL |
+
+### Local Development
+
+```bash
+npm install
+npm run dev    # Starts dev server on http://localhost:3000
+```

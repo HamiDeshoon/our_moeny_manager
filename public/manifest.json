@@ -1,15 +1,27 @@
 {
   "short_name": "DuoSpend",
-  "name": "DuoSpend - Smart Household Budget",
+  "name": "DuoSpend - مدیریت مالی هوشمند خانواده",
+  "description": "Smart household expense tracker for couples. AI-powered voice entry, receipt scanning, budget planning and financial analytics.",
   "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
-  "start_url": ".",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": "standalone",
+  "orientation": "portrait",
   "theme_color": "#09090b",
-  "background_color": "#09090b"
+  "background_color": "#09090b",
+  "dir": "rtl",
+  "lang": "fa",
+  "categories": ["finance", "productivity", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    { "name": "افزودن تراکنش", "short_name": "تراکنش", "url": "/?action=add", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "اسکن فاکتور", "short_name": "فاکتور", "url": "/?action=receipt", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "ثبت صوتی", "short_name": "صوتی", "url": "/?action=voice", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
 }
