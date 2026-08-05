@@ -63,6 +63,17 @@ function getAuthUser(): string | null {
   } catch { return null; }
 }
 
+// Thrown for a reachable backend that returned a JSON error body (e.g. 401,
+// 400, 500). This is NOT a connectivity problem, so it should never flip the
+// app into offline mode — it should just propagate to the caller.
+class HttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> {
   const customKey = getSavedCustomApiKey();
   const authUser = getAuthUser();
@@ -79,10 +90,17 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
     headers['x-auth-user'] = authUser;
   }
 
-  const res = await fetch(`${API_BASE}${url}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${url}`, {
+      ...options,
+      headers,
+    });
+  } catch (err) {
+    // Actual network failure (offline, DNS, CORS, server down) — mark offline.
+    offlineMode = true;
+    throw err;
+  }
 
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {
@@ -95,33 +113,48 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
   }
 
   const data = await res.json();
+  // A JSON response — successful or not — means the backend is alive.
+  offlineMode = false;
   if (!res.ok) {
     if (res.status === 401) {
       // Session expired or not logged in — clear stale auth and redirect to login
       try { localStorage.removeItem('duospend_auth_user'); } catch {}
     }
-    throw new Error(data.error || `HTTP ${res.status}: Request failed`);
+    throw new HttpError(res.status, data.error || `HTTP ${res.status}: Request failed`);
   }
-  // A successful JSON response means the backend is alive.
-  offlineMode = false;
   return data as T;
 }
 
 /**
- * Try the backend first; on any failure (including the non-JSON HTML fallback
- * on GitHub Pages), fall back to the offline localStorage layer.
+ * Try the backend first; only fall back to the offline localStorage layer
+ * when the backend is actually unreachable (network failure or non-JSON HTML
+ * response, e.g. on static hosting with no backend). A reachable backend that
+ * returns a JSON error (401/400/500) is propagated to the caller as-is so it
+ * doesn't get masked as "offline" or silently swapped for stale local data.
  */
 async function withOfflineFallback<T>(
   onlineCall: () => Promise<T>,
   offlineCall: () => T | Promise<T>,
 ): Promise<T> {
   if (offlineMode) {
-    return offlineCall();
+    // Still attempt the online call so we recover automatically once the
+    // backend becomes reachable again, instead of being stuck offline
+    // forever for the rest of the session.
+    try {
+      return await onlineCall();
+    } catch (err) {
+      if (err instanceof HttpError) throw err;
+      return offlineCall();
+    }
   }
   try {
     return await onlineCall();
   } catch (err) {
-    // non-JSON HTML or network failure → offline.
+    if (err instanceof HttpError) {
+      // Reachable backend, legitimate application error — don't go offline.
+      throw err;
+    }
+    // Network failure or non-JSON HTML → genuinely offline.
     offlineMode = true;
     console.warn('[api] Falling back to offline layer:', (err as Error).message);
     return offlineCall();
