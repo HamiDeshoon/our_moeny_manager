@@ -75,11 +75,10 @@ class PostgresDB {
   private ready: Promise<void>;
 
   constructor() {
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('neon') || process.env.DATABASE_URL?.includes('supabase')
-        ? { rejectUnauthorized: false }
-        : undefined,
+      connectionString: dbUrl,
+      ssl: dbUrl && !dbUrl.includes('localhost') ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
     });
@@ -88,9 +87,14 @@ class PostgresDB {
   }
 
   private async init() {
-    await this.migrate();
-    await this.seed();
-    console.log('[PostgresDB] Ready');
+    try {
+      await this.migrate();
+      await this.seed();
+      console.log('[PostgresDB] Ready');
+    } catch (err) {
+      console.error('[PostgresDB] Initialization Error:', err);
+      throw err;
+    }
   }
 
   private async migrate() {
@@ -706,4 +710,4 @@ class FileDB {
 // Export: use PostgreSQL if DATABASE_URL is set, else file
 // ──────────────────────────────────────────────
 
-export const db = process.env.DATABASE_URL ? new PostgresDB() : new FileDB() as any;
+export const db = (process.env.DATABASE_URL || process.env.POSTGRES_URL) ? new PostgresDB() : new FileDB() as any;
