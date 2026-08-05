@@ -75,6 +75,10 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
     headers['x-gemini-key'] = customKey;
   }
 
+  if (authUser) {
+    headers['x-auth-user'] = authUser;
+  }
+
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
