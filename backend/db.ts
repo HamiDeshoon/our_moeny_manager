@@ -76,6 +76,9 @@ class PostgresDB {
 
   constructor() {
     const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!dbUrl) {
+      console.warn('[PostgresDB] WARNING: Neither DATABASE_URL nor POSTGRES_URL environment variable was found.');
+    }
     this.pool = new Pool({
       connectionString: dbUrl,
       ssl: dbUrl && !dbUrl.includes('localhost') ? { rejectUnauthorized: false } : undefined,
@@ -83,7 +86,9 @@ class PostgresDB {
       idleTimeoutMillis: 30000,
     });
 
-    this.ready = this.init();
+    this.ready = this.init().catch(err => {
+      console.error('[PostgresDB] Initialization connection failed:', err);
+    });
   }
 
   getStorageMode(): 'postgresql' | 'local_file' {
@@ -94,9 +99,9 @@ class PostgresDB {
     try {
       await this.migrate();
       await this.seed();
-      console.log('[PostgresDB] Ready');
+      console.log('[PostgresDB] Connected and Ready');
     } catch (err) {
-      console.error('[PostgresDB] Initialization Error:', err);
+      console.error('[PostgresDB] Initialization Migration Error:', err);
       throw err;
     }
   }
