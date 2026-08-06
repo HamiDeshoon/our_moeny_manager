@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import * as xlsx from 'xlsx';
 import { db } from './db.js';
 import { analyzeSpendingInsights, parseExcelOrSheetWithGemini, parseVoiceMemo, scanReceiptImage } from './geminiService.js';
 
@@ -60,10 +59,17 @@ apiRouter.post('/auth/login', (req, res) => {
 apiRouter.get('/settings', async (req, res) => {
   try {
     const settings = await db.getSettings();
+    const storageMode = typeof db.getStorageMode === 'function' ? db.getStorageMode() : ((process.env.DATABASE_URL || process.env.POSTGRES_URL) ? 'postgresql' : 'local_file');
     const maskedKey = settings.geminiApiKey
       ? `${settings.geminiApiKey.substring(0, 4)}...${settings.geminiApiKey.substring(settings.geminiApiKey.length - 4)}`
       : '';
-    res.json({ ...settings, hasEnvKey: Boolean(process.env.GEMINI_API_KEY), maskedKey, hasCustomKey: Boolean(settings.geminiApiKey) });
+    res.json({
+      ...settings,
+      hasEnvKey: Boolean(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
+      maskedKey,
+      hasCustomKey: Boolean(settings.geminiApiKey),
+      storageMode,
+    });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
@@ -285,6 +291,7 @@ apiRouter.post('/ai/import-sheet', async (req, res) => {
     const customKey = (req.headers['x-gemini-key'] as string) || settings.geminiApiKey;
     let sheetText = pastedText || '';
     if (fileBase64) {
+      const xlsx = await import('xlsx');
       const cleanB64 = fileBase64.replace(/^data:.*?;base64,/, '');
       const binary = Buffer.from(cleanB64, 'base64');
       const workbook = xlsx.read(binary, { type: 'buffer' });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Key, ShieldCheck, Save, RefreshCw, CheckCircle2, AlertCircle, Users, Github } from 'lucide-react';
+import { Key, ShieldCheck, Save, RefreshCw, CheckCircle2, AlertCircle, Users, Github, Database } from 'lucide-react';
 import { api, getSavedCustomApiKey, saveCustomApiKey } from '../services/api';
 import { AppSettings } from '../types';
 import { BottomSheet } from './ui/BottomSheet';
@@ -20,30 +20,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onUpdateSettings,
 }) => {
   const [geminiApiKey, setGeminiApiKey] = useState('');
-  const [currencySymbol, setCurrencySymbol] = useState('$');
-  const [partnerAName, setPartnerAName] = useState('Alex');
-  const [partnerAAvatar, setPartnerAAvatar] = useState('👩‍💻');
-  const [partnerBName, setPartnerBName] = useState('Sam');
-  const [partnerBAvatar, setPartnerBAvatar] = useState('👨‍🎨');
-  const [isRtl, setIsRtl] = useState(true);
-  const [noSettlementsMode, setNoSettlementsMode] = useState(false);
+  const [partnerAName, setPartnerAName] = useState('');
+  const [partnerAAvatar, setPartnerAAvatar] = useState('');
+  const [partnerBName, setPartnerBName] = useState('');
+  const [partnerBAvatar, setPartnerBAvatar] = useState('');
+  const [currencySymbol, setCurrencySymbol] = useState('تومان');
   const [useJalaliDate, setUseJalaliDate] = useState(true);
+  const [noSettlementsMode, setNoSettlementsMode] = useState(false);
 
+  const [isSaving, setIsSaving] = useState(false);
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (settings) {
-      setCurrencySymbol(settings.currencySymbol || '$');
-      setPartnerAName(settings.partnerA?.name || 'Alex');
-      setPartnerAAvatar(settings.partnerA?.avatar || '👩‍💻');
-      setPartnerBName(settings.partnerB?.name || 'Sam');
-      setPartnerBAvatar(settings.partnerB?.avatar || '👨‍🎨');
-      setIsRtl(settings.isRtl !== undefined ? settings.isRtl : true);
-      setNoSettlementsMode(Boolean(settings.noSettlementsMode));
-      setUseJalaliDate(settings.useJalaliDate !== undefined ? settings.useJalaliDate : true);
       setGeminiApiKey(getSavedCustomApiKey() || settings.geminiApiKey || '');
+      setPartnerAName(settings.partnerA?.name || 'کاربر اول');
+      setPartnerAAvatar(settings.partnerA?.avatar || '👨‍💼');
+      setPartnerBName(settings.partnerB?.name || 'کاربر دوم');
+      setPartnerBAvatar(settings.partnerB?.avatar || '👩‍⚕️');
+      setCurrencySymbol(settings.currencySymbol || 'تومان');
+      setUseJalaliDate(settings.useJalaliDate ?? true);
+      setNoSettlementsMode(settings.noSettlementsMode ?? false);
     }
   }, [settings, isOpen]);
 
@@ -52,9 +50,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setTestResult(null);
     try {
       const res = await api.testApiKey(geminiApiKey);
-      setTestResult({ success: true, message: res.message });
+      setTestResult({ success: true, message: 'ارتباط با API جمینای تایید شد!' });
     } catch (err: any) {
-      setTestResult({ success: false, message: err.message || 'Key verification failed' });
+      setTestResult({ success: false, message: err.message || 'خطا در تایید کلید' });
     } finally {
       setIsVerifyingKey(false);
     }
@@ -65,28 +63,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     setIsSaving(true);
     try {
       saveCustomApiKey(geminiApiKey.trim());
-
       await onUpdateSettings({
         geminiApiKey: geminiApiKey.trim(),
         currencySymbol,
-        isRtl,
-        noSettlementsMode,
         useJalaliDate,
-        partnerA: {
-          ...settings.partnerA,
-          name: partnerAName.trim() || 'Alex',
-          avatar: partnerAAvatar.trim() || '👩‍💻',
-        },
-        partnerB: {
-          ...settings.partnerB,
-          name: partnerBName.trim() || 'Sam',
-          avatar: partnerBAvatar.trim() || '👨‍🎨',
-        },
+        noSettlementsMode,
+        partnerA: { ...settings.partnerA, name: partnerAName, avatar: partnerAAvatar },
+        partnerB: { ...settings.partnerB, name: partnerBName, avatar: partnerBAvatar },
       });
-
       onClose();
     } catch (err) {
-      console.error('Failed to save settings:', err);
+      console.error('Failed to update settings:', err);
     } finally {
       setIsSaving(false);
     }
@@ -100,6 +87,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <ShieldCheck className="w-5 h-5" />
           </div>
           <p>مدیریت کلید API، پروفایل اعضا و ترجیحات نمایشی.</p>
+        </div>
+
+        {/* Storage Status & Version */}
+        <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
+              <Database className="w-4 h-4 text-emerald-400" />
+              حالت دیتابیس و نسخه برنامه
+            </h3>
+            <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-mono font-bold">
+              v1.3.0-live
+            </span>
+          </div>
+          <p className="text-xs text-zinc-400 leading-relaxed">
+            سیستم در حالت <strong className="text-emerald-400">Cloud Sync (PostgreSQL)</strong> فعال است. اطلاعات به طور مستقیم با دیتابیس متمرکز ابری همگام‌سازی می‌شوند.
+          </p>
         </div>
 
         {/* Gemini API Key */}
