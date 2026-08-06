@@ -48,11 +48,18 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="hidden sm:block">
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <span className="font-extrabold text-lg tracking-tight text-zinc-100">
+                <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
                   DuoSpend
+                  <span className="bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">
+                    v1.2.0-cloud
+                  </span>
                 </span>
                 <span className="hidden md:inline-flex bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
                   Couple Finance
+                </span>
+                <span title="دیتابیس ابری متصل است (PostgreSQL Cloud Sync Active)" className="hidden xl:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  همگام‌سازی ابری (Neon PostgreSQL)
                 </span>
               </div>
               <p className="text-xs text-zinc-400 hidden lg:block">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Mic, Camera, RefreshCw, WifiOff } from 'lucide-react';
-import { api, isOfflineMode } from './services/api';
+import { Plus, Mic, Camera, RefreshCw } from 'lucide-react';
+import { api } from './services/api';
 import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, Transaction } from './types';
 import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
 import { haptic } from './utils/haptics';
@@ -48,7 +48,6 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools'>('dashboard');
-  const [offlineBanner, setOfflineBanner] = useState(false);
 
   // Auth
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -101,7 +100,6 @@ export default function App() {
       setSummary(fetchedSummary);
       setBudgets(fetchedBudgets);
       setBills(fetchedBills);
-      setOfflineBanner(isOfflineMode());
     } catch (err: any) {
       setLoadError(err.message || 'Failed to connect to backend server');
     } finally {
@@ -123,55 +121,58 @@ export default function App() {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
     if (editingTransaction) {
-      await api.updateTransaction(editingTransaction.id, txData);
+      const updated = await api.updateTransaction(editingTransaction.id, txData);
       setEditingTransaction(null);
+      setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
     } else {
-      await api.addTransaction(txData);
+      const created = await api.addTransaction(txData);
+      setTransactions(prev => [created, ...prev]);
     }
-    await loadData();
-  }, [editingTransaction]);
+    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
+  }, [currentUser, editingTransaction, selectedMonth]);
 
   const handleDeleteTransaction = useCallback(async (id: string) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteTransaction(id);
-    await loadData();
-  }, []);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
+  }, [currentUser, selectedMonth]);
 
   const handleUpdateBudgets = useCallback(async (newBudgets: Budget[]) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.updateBudgets(newBudgets);
-    await loadData();
-  }, []);
+    const updated = await api.updateBudgets(newBudgets);
+    setBudgets(updated);
+  }, [currentUser]);
 
   const handleToggleBillPaid = useCallback(async (id: string, isPaid: boolean) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.toggleBillPaid(id, isPaid);
-    await loadData();
-  }, []);
+    const updated = await api.toggleBillPaid(id, isPaid);
+    setBills(prev => prev.map(b => b.id === id ? updated : b));
+  }, [currentUser]);
 
   const handleAddBill = useCallback(async (billData: Omit<Bill, 'id'>) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
-    await api.addBill(billData);
-    await loadData();
-  }, []);
+    const created = await api.addBill(billData);
+    setBills(prev => [...prev, created]);
+  }, [currentUser]);
 
   const handleDeleteBill = useCallback(async (id: string) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteBill(id);
-    await loadData();
-  }, []);
+    setBills(prev => prev.filter(b => b.id !== id));
+  }, [currentUser]);
 
   const handleUpdateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.updateSettings(newSettings);
-    await loadData();
-  }, []);
+    const updated = await api.updateSettings(newSettings);
+    setSettings(updated);
+  }, [currentUser]);
 
   const handleTabChange = (tab: typeof activeTab) => {
     haptic('light');
@@ -224,23 +225,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Offline mode banner */}
-      <AnimatePresence>
-        {offlineBanner && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="bg-amber-500/15 border-b border-amber-500/20 overflow-hidden"
-          >
-            <div className="flex items-center justify-center gap-2 py-2 px-4 text-xs text-amber-400">
-              <WifiOff className="w-3.5 h-3.5" />
-              <span>حالت آفلاین — داده‌ها فقط روی این دستگاه ذخیره می‌شوند</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <Header
         settings={activeSettings}
         selectedMonth={selectedMonth}
@@ -258,11 +242,13 @@ export default function App() {
       />
 
       {!isAuthed && (
-        <div className="bg-amber-500/15 border-b border-amber-500/20 px-4 py-3 text-center">
-          <p className="text-sm text-amber-400 font-medium">
-            ⚠️ شما وارد نشده‌اید. برای افزودن، حذف یا تغییر اطلاعات، ابتدا وارد شوید.
-            <button onClick={() => setIsLoginModalOpen(true)} className="mr-2 underline font-bold text-amber-300 hover:text-amber-200">ورود</button>
-          </p>
+        <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-center shadow-lg shadow-amber-950/10">
+            <p className="text-sm text-amber-100 font-medium">
+              ⚠️ شما وارد نشده‌اید. برای افزودن، حذف یا تغییر اطلاعات، ابتدا وارد شوید.
+              <button onClick={() => setIsLoginModalOpen(true)} className="mr-2 rounded-lg bg-amber-300/15 px-3 py-1 font-bold text-amber-200 hover:bg-amber-300/25 transition">ورود</button>
+            </p>
+          </div>
         </div>
       )}
 
@@ -277,7 +263,7 @@ export default function App() {
                 <TransactionList
                   transactions={transactions}
                   settings={activeSettings}
-                  onEditTransaction={(tx) => { setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
+                  onEditTransaction={(tx) => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
                   onDeleteTransaction={handleDeleteTransaction}
                   onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
                 />
@@ -289,7 +275,7 @@ export default function App() {
                 <TransactionList
                   transactions={transactions}
                   settings={activeSettings}
-                  onEditTransaction={(tx) => { setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
+                  onEditTransaction={(tx) => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
                   onDeleteTransaction={handleDeleteTransaction}
                   onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
                 />
@@ -316,7 +302,7 @@ export default function App() {
 
             {activeTab === 'tools' && (
               <motion.div key="tools" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <DataToolsPanel onOpenAddExpense={() => setIsAddExpenseOpen(true)} onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }} onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
+                <DataToolsPanel onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }} onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }} onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -327,21 +313,21 @@ export default function App() {
       <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden safe-area-bottom pointer-events-none">
         <div className="flex items-center justify-center gap-3 pb-3">
           <button
-            onClick={() => { haptic('light'); setIsVoiceModalOpen(true); }}
+            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('light'); setIsVoiceModalOpen(true); }}
             className="pointer-events-auto w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center tap-scale active:scale-90 transition"
             aria-label="Voice"
           >
             <Mic className="w-5 h-5" />
           </button>
           <button
-            onClick={() => { haptic('medium'); setEditingTransaction(null); setIsAddExpenseOpen(true); }}
+            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('medium'); setEditingTransaction(null); setIsAddExpenseOpen(true); }}
             className="pointer-events-auto w-16 h-16 rounded-full bg-emerald-600 text-white shadow-xl flex items-center justify-center tap-scale active:scale-90 transition border-2 border-emerald-400/30"
             aria-label="Add expense"
           >
             <Plus className="w-7 h-7" />
           </button>
           <button
-            onClick={() => { haptic('light'); setIsReceiptModalOpen(true); }}
+            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('light'); setIsReceiptModalOpen(true); }}
             className="pointer-events-auto w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center tap-scale active:scale-90 transition"
             aria-label="Scan receipt"
           >

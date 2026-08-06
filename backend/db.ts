@@ -75,11 +75,10 @@ class PostgresDB {
   private ready: Promise<void>;
 
   constructor() {
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
     this.pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('render.com') || process.env.DATABASE_URL?.includes('neon') || process.env.DATABASE_URL?.includes('supabase')
-        ? { rejectUnauthorized: false }
-        : undefined,
+      connectionString: dbUrl,
+      ssl: dbUrl && !dbUrl.includes('localhost') ? { rejectUnauthorized: false } : undefined,
       max: 10,
       idleTimeoutMillis: 30000,
     });
@@ -87,10 +86,19 @@ class PostgresDB {
     this.ready = this.init();
   }
 
+  getStorageMode(): 'postgresql' | 'local_file' {
+    return 'postgresql';
+  }
+
   private async init() {
-    await this.migrate();
-    await this.seed();
-    console.log('[PostgresDB] Ready');
+    try {
+      await this.migrate();
+      await this.seed();
+      console.log('[PostgresDB] Ready');
+    } catch (err) {
+      console.error('[PostgresDB] Initialization Error:', err);
+      throw err;
+    }
   }
 
   private async migrate() {
@@ -474,236 +482,7 @@ class PostgresDB {
 }
 
 // ──────────────────────────────────────────────
-// File-based Database (fallback when no DATABASE_URL)
+// Export: Exclusive PostgreSQL Cloud Sync Database
 // ──────────────────────────────────────────────
 
-interface DatabaseStore {
-  settings: AppSettings;
-  transactions: Transaction[];
-  budgets: Budget[];
-  bills: Bill[];
-  recurringExpenses: RecurringExpense[];
-}
-
-class FileDB {
-  private data: DatabaseStore;
-
-  constructor() {
-    this.data = this.loadData();
-    console.log('[FileDB] Using file-based store (no DATABASE_URL set)');
-  }
-
-  private loadData(): DatabaseStore {
-    try {
-      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-      if (fs.existsSync(DATA_FILE)) {
-        const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-        return {
-          settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
-          transactions: parsed.transactions || seedTransactions(),
-          budgets: parsed.budgets || [...DEFAULT_BUDGETS],
-          bills: parsed.bills || [...DEFAULT_BILLS],
-          recurringExpenses: parsed.recurringExpenses || [...DEFAULT_RECURRING_EXPENSES],
-        };
-      }
-    } catch (err) { console.error('Error loading database file:', err); }
-    const initial = { settings: { ...DEFAULT_SETTINGS }, transactions: seedTransactions(), budgets: [...DEFAULT_BUDGETS], bills: [...DEFAULT_BILLS], recurringExpenses: [...DEFAULT_RECURRING_EXPENSES] };
-    this.saveData(initial);
-    return initial;
-  }
-
-  private saveData(d: DatabaseStore = this.data) {
-    try {
-      if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-      fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2), 'utf-8');
-    } catch (err) { console.error('Failed to save:', err); }
-  }
-
-  async getSettings(): Promise<AppSettings> {
-    if (!this.data.settings.partnerA?.name) this.data.settings.partnerA.name = 'کاربر اول';
-    if (!this.data.settings.partnerB?.name) this.data.settings.partnerB.name = 'کاربر دوم';
-    return this.data.settings;
-  }
-
-  async updateSettings(s: Partial<AppSettings>): Promise<AppSettings> {
-    this.data.settings = { ...this.data.settings, ...s };
-    this.saveData();
-    return this.data.settings;
-  }
-
-  async getTransactions(month?: string): Promise<Transaction[]> {
-    if (!month) return [...this.data.transactions].sort((a, b) => b.date.localeCompare(a.date));
-    if (month.includes('..')) {
-      const [start, end] = month.split('..');
-      return this.data.transactions.filter(t => t.date >= start && t.date <= end).sort((a, b) => b.date.localeCompare(a.date));
-    }
-    return this.data.transactions.filter(t => t.date.startsWith(month)).sort((a, b) => b.date.localeCompare(a.date));
-  }
-
-  async addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction> {
-    const fullTx: Transaction = { ...tx, id: genId('tx'), createdAt: new Date().toISOString() } as Transaction;
-    this.data.transactions.push(fullTx);
-    this.saveData();
-    return fullTx;
-  }
-
-  async batchAddTransactions(items: Omit<Transaction, 'id' | 'createdAt'>[]): Promise<Transaction[]> {
-    const created = items.map(item => {
-      const tx = { ...item, id: genId('tx'), createdAt: new Date().toISOString() } as Transaction;
-      this.data.transactions.push(tx);
-      return tx;
-    });
-    this.saveData();
-    return created;
-  }
-
-  async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
-    const idx = this.data.transactions.findIndex(t => t.id === id);
-    if (idx === -1) return null;
-    this.data.transactions[idx] = { ...this.data.transactions[idx], ...updates };
-    this.saveData();
-    return this.data.transactions[idx];
-  }
-
-  async deleteTransaction(id: string): Promise<boolean> {
-    const before = this.data.transactions.length;
-    this.data.transactions = this.data.transactions.filter(t => t.id !== id);
-    const deleted = this.data.transactions.length < before;
-    if (deleted) this.saveData();
-    return deleted;
-  }
-
-  async processRecurringExpenses(targetMonth: string): Promise<Transaction[]> {
-    if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return [];
-    const templates = this.data.transactions.filter(t => t.isRecurring);
-    const unique = new Map<string, Transaction>();
-    for (const t of templates) { if (!unique.has(t.title)) unique.set(t.title, t); }
-    const added: Transaction[] = [];
-    for (const template of unique.values()) {
-      const dayNum = template.recurringDay || 1;
-      const newDate = `${targetMonth}-${String(dayNum).padStart(2, '0')}`;
-      const exists = this.data.transactions.some(t => t.title === template.title && t.date.startsWith(targetMonth));
-      if (!exists) {
-        const newTx: Transaction = {
-          id: genId('tx-rec'), title: template.title, amount: template.amount,
-          type: template.type || 'EXPENSE', category: template.category, paidBy: template.paidBy,
-          date: newDate, vendor: template.vendor,
-          notes: template.notes ? `${template.notes} (Auto Recurring)` : 'Auto generated monthly recurring',
-          isRecurring: false, createdAt: new Date().toISOString(),
-        };
-        this.data.transactions.push(newTx);
-        added.push(newTx);
-      }
-    }
-    if (added.length > 0) this.saveData();
-    return added;
-  }
-
-  async getBudgets(): Promise<Budget[]> { return [...this.data.budgets]; }
-
-  async updateBudgets(budgets: Budget[]): Promise<Budget[]> {
-    this.data.budgets = budgets;
-    this.saveData();
-    return budgets;
-  }
-
-  async getBills(): Promise<Bill[]> { return [...this.data.bills]; }
-
-  async addBill(bill: Omit<Bill, 'id'>): Promise<Bill> {
-    const newBill: Bill = { ...bill, id: genId('bill') };
-    this.data.bills.push(newBill);
-    this.saveData();
-    return newBill;
-  }
-
-  async toggleBillPaid(id: string, isPaid: boolean): Promise<Bill | null> {
-    const bill = this.data.bills.find(b => b.id === id);
-    if (!bill) return null;
-    bill.isPaidThisMonth = isPaid;
-    this.saveData();
-    return bill;
-  }
-
-  async deleteBill(id: string): Promise<boolean> {
-    const before = this.data.bills.length;
-    this.data.bills = this.data.bills.filter(b => b.id !== id);
-    const deleted = this.data.bills.length < before;
-    if (deleted) this.saveData();
-    return deleted;
-  }
-
-  async getRecurringExpenses(): Promise<RecurringExpense[]> { return [...this.data.recurringExpenses]; }
-
-  async addRecurringExpense(item: Omit<RecurringExpense, 'id'>): Promise<RecurringExpense> {
-    const newItem: RecurringExpense = { ...item, id: genId('rec') };
-    this.data.recurringExpenses.push(newItem);
-    this.saveData();
-    return newItem;
-  }
-
-  async toggleRecurringExpenseActive(id: string, isActive: boolean): Promise<RecurringExpense | null> {
-    const item = this.data.recurringExpenses.find(r => r.id === id);
-    if (!item) return null;
-    item.isActive = isActive;
-    this.saveData();
-    return item;
-  }
-
-  async deleteRecurringExpense(id: string): Promise<boolean> {
-    const before = this.data.recurringExpenses.length;
-    this.data.recurringExpenses = this.data.recurringExpenses.filter(r => r.id !== id);
-    const deleted = this.data.recurringExpenses.length < before;
-    if (deleted) this.saveData();
-    return deleted;
-  }
-
-  async calculateHouseholdSummary(month?: string): Promise<{ partnerATotalPaid: number; partnerBTotalPaid: number }> {
-    let txs = this.data.transactions.filter(t => t.type === 'EXPENSE');
-    if (month) {
-      if (month.includes('..')) {
-        const [start, end] = month.split('..');
-        txs = txs.filter(t => t.date >= start && t.date <= end);
-      } else {
-        txs = txs.filter(t => t.date.startsWith(month));
-      }
-    }
-    return {
-      partnerATotalPaid: txs.filter(t => t.paidBy === 'partner_a').reduce((s, t) => s + t.amount, 0),
-      partnerBTotalPaid: txs.filter(t => t.paidBy === 'partner_b').reduce((s, t) => s + t.amount, 0),
-    };
-  }
-
-  async getThreeMonthTrends(month?: string): Promise<MonthTrendData[]> {
-    const now = new Date();
-    const months: string[] = [];
-    for (let i = 2; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
-    const trends: MonthTrendData[] = [];
-    for (const m of months) {
-      const txs = await this.getTransactions(m);
-      const expenses = txs.filter(t => t.type === 'EXPENSE');
-      const income = txs.filter(t => t.type === 'INCOME');
-      const totalExpense = expenses.reduce((s, t) => s + t.amount, 0);
-      const totalIncome = income.reduce((s, t) => s + t.amount, 0);
-      const partnerAExpense = expenses.filter(t => t.paidBy === 'partner_a').reduce((s, t) => s + t.amount, 0);
-      const partnerBExpense = expenses.filter(t => t.paidBy === 'partner_b').reduce((s, t) => s + t.amount, 0);
-      const categoryBreakdown: Record<string, number> = {};
-      for (const t of expenses) categoryBreakdown[t.category] = (categoryBreakdown[t.category] || 0) + t.amount;
-      trends.push({
-        monthKey: m, monthLabel: m, totalExpense, totalIncome,
-        totalSavings: totalIncome - totalExpense,
-        savingsRatePct: totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0,
-        partnerAExpense, partnerBExpense, categoryBreakdown,
-      });
-    }
-    return trends;
-  }
-}
-
-// ──────────────────────────────────────────────
-// Export: use PostgreSQL if DATABASE_URL is set, else file
-// ──────────────────────────────────────────────
-
-export const db = process.env.DATABASE_URL ? new PostgresDB() : new FileDB() as any;
+export const db = new PostgresDB();
