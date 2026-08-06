@@ -1,7 +1,7 @@
 services:
   - type: web
     name: duospend
-    env: node
+    runtime: node
     buildCommand: npm ci && npm run build
     startCommand: npm start
     envVars:

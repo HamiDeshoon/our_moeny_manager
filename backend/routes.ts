@@ -8,9 +8,20 @@ export const apiRouter = Router();
 // Simple token-based auth. The frontend stores the user object in localStorage
 // after login. We check a header "x-auth-user" containing the username.
 // This prevents unauthenticated users from adding/deleting data.
+const publicReadPaths = new Set([
+  '/settings',
+  '/transactions',
+  '/household/summary',
+  '/settlements/summary',
+  '/budgets',
+  '/bills',
+  '/recurring-expenses',
+  '/analytics/three-months',
+]);
+
 const authMiddleware = (req: any, res: any, next: any) => {
-  // Skip auth for login and health endpoints
-  if (req.path === '/auth/login' || req.path === '/health') {
+  // Skip auth for login, health, and read-only dashboard data.
+  if (req.path === '/auth/login' || req.path === '/health' || (req.method === 'GET' && publicReadPaths.has(req.path))) {
     return next();
   }
   const authUser = req.headers['x-auth-user'] as string;
@@ -27,7 +38,7 @@ const authMiddleware = (req: any, res: any, next: any) => {
   next();
 };
 
-// Apply auth middleware to all routes
+// Apply auth middleware to all routes. Mutations and AI actions still require login.
 apiRouter.use(authMiddleware);
 
 // --- AUTHENTICATION ---

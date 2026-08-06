@@ -89,7 +89,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>
-              {username === 'hamid' && <CheckCircle2 className="w-4 h-4 text-indigo-400 flex-shrink-0" />}
+              {username === 'hamid' && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />}
             </button>
 
             <button
@@ -108,7 +108,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <div className="text-[10px] text-zinc-500">کاربر فعال</div>
                 </div>
               </div>
-              {username === 'fati' && <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />}
+              {username === 'fati' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
             </button>
           </div>
         </div>

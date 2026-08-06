@@ -66,6 +66,41 @@ function seedTransactions(): Transaction[] {
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
+function matchesMonth(date: string, month?: string): boolean {
+  if (!month) return true;
+  if (month.includes('..')) {
+    const [start, end] = month.split('..');
+    return date >= start && date <= end;
+  }
+  return date.startsWith(`${month}-`);
+}
+
+function getThreeCalendarMonths(): string[] {
+  const now = new Date();
+  const months: string[] = [];
+  for (let i = 2; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  return months;
+}
+
+function normalizeSettings(settings: AppSettings): AppSettings {
+  const normalized = { ...DEFAULT_SETTINGS, ...settings };
+  if (!normalized.partnerA?.name) normalized.partnerA = { ...DEFAULT_SETTINGS.partnerA };
+  if (!normalized.partnerB?.name) normalized.partnerB = { ...DEFAULT_SETTINGS.partnerB };
+  if (normalized.geminiApiKey?.startsWith('Gemini API key is missing')) normalized.geminiApiKey = '';
+  return normalized;
+}
+
+type StoreData = {
+  settings: AppSettings;
+  transactions: Transaction[];
+  budgets: Budget[];
+  bills: Bill[];
+  recurringExpenses: RecurringExpense[];
+};
+
 // ──────────────────────────────────────────────
 // PostgreSQL Database Layer
 // ──────────────────────────────────────────────
@@ -76,6 +111,9 @@ class PostgresDB {
 
   constructor() {
     const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!dbUrl) {
+      console.warn('[PostgresDB] WARNING: Neither DATABASE_URL nor POSTGRES_URL environment variable was found.');
+    }
     this.pool = new Pool({
       connectionString: dbUrl,
       ssl: dbUrl && !dbUrl.includes('localhost') ? { rejectUnauthorized: false } : undefined,
@@ -83,7 +121,9 @@ class PostgresDB {
       idleTimeoutMillis: 30000,
     });
 
-    this.ready = this.init();
+    this.ready = this.init().catch(err => {
+      console.error('[PostgresDB] Initialization connection failed:', err);
+    });
   }
 
   getStorageMode(): 'postgresql' | 'local_file' {
@@ -94,9 +134,9 @@ class PostgresDB {
     try {
       await this.migrate();
       await this.seed();
-      console.log('[PostgresDB] Ready');
+      console.log('[PostgresDB] Connected and Ready');
     } catch (err) {
-      console.error('[PostgresDB] Initialization Error:', err);
+      console.error('[PostgresDB] Initialization Migration Error:', err);
       throw err;
     }
   }
@@ -230,10 +270,7 @@ class PostgresDB {
     await this.ensureReady();
     const res = await this.pool.query('SELECT data FROM settings WHERE id = 1');
     if (res.rows.length === 0) return { ...DEFAULT_SETTINGS };
-    const s = res.rows[0].data as AppSettings;
-    if (!s.partnerA?.name) s.partnerA.name = 'کاربر اول';
-    if (!s.partnerB?.name) s.partnerB.name = 'کاربر دوم';
-    return s;
+    return normalizeSettings(res.rows[0].data as AppSettings);
   }
 
   async updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
@@ -445,12 +482,7 @@ class PostgresDB {
   // ── Three Month Trends ──
   async getThreeMonthTrends(month?: string): Promise<MonthTrendData[]> {
     await this.ensureReady();
-    const now = new Date();
-    const months: string[] = [];
-    for (let i = 2; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
-    }
+    const months = getThreeCalendarMonths();
 
     const trends: MonthTrendData[] = [];
     for (const m of months) {
@@ -482,7 +514,253 @@ class PostgresDB {
 }
 
 // ──────────────────────────────────────────────
-// Export: Exclusive PostgreSQL Cloud Sync Database
+// Local JSON Database Layer
 // ──────────────────────────────────────────────
 
-export const db = new PostgresDB();
+class LocalFileDB {
+  private store: StoreData;
+
+  constructor() {
+    this.store = this.load();
+    console.log(`[LocalFileDB] Ready at ${DATA_FILE}`);
+  }
+
+  getStorageMode(): 'postgresql' | 'local_file' {
+    return 'local_file';
+  }
+
+  private load(): StoreData {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(DATA_FILE)) {
+      const initialStore = {
+        settings: { ...DEFAULT_SETTINGS },
+        transactions: seedTransactions(),
+        budgets: [...DEFAULT_BUDGETS],
+        bills: [...DEFAULT_BILLS],
+        recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
+      };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(initialStore, null, 2));
+      return initialStore;
+    }
+
+    try {
+      const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as Partial<StoreData>;
+      return {
+        settings: normalizeSettings((parsed.settings || DEFAULT_SETTINGS) as AppSettings),
+        transactions: Array.isArray(parsed.transactions) ? parsed.transactions : seedTransactions(),
+        budgets: Array.isArray(parsed.budgets) ? parsed.budgets : [...DEFAULT_BUDGETS],
+        bills: Array.isArray(parsed.bills) ? parsed.bills : [...DEFAULT_BILLS],
+        recurringExpenses: Array.isArray(parsed.recurringExpenses) ? parsed.recurringExpenses : [...DEFAULT_RECURRING_EXPENSES],
+      };
+    } catch (err) {
+      console.error('[LocalFileDB] Failed to read store.json; using defaults:', err);
+      const fallbackStore = {
+        settings: { ...DEFAULT_SETTINGS },
+        transactions: seedTransactions(),
+        budgets: [...DEFAULT_BUDGETS],
+        bills: [...DEFAULT_BILLS],
+        recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
+      };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(fallbackStore, null, 2));
+      return fallbackStore;
+    }
+  }
+
+  private save(): void {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(DATA_FILE, JSON.stringify(this.store, null, 2));
+  }
+
+  async getSettings(): Promise<AppSettings> {
+    return normalizeSettings(this.store.settings);
+  }
+
+  async updateSettings(newSettings: Partial<AppSettings>): Promise<AppSettings> {
+    this.store.settings = normalizeSettings({ ...this.store.settings, ...newSettings });
+    this.save();
+    return this.store.settings;
+  }
+
+  async getTransactions(month?: string): Promise<Transaction[]> {
+    return this.store.transactions
+      .filter(tx => matchesMonth(tx.date, month))
+      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async addTransaction(tx: Omit<Transaction, 'id' | 'createdAt'>): Promise<Transaction> {
+    const created: Transaction = {
+      ...tx,
+      id: genId('tx'),
+      type: tx.type || 'EXPENSE',
+      createdAt: new Date().toISOString(),
+    } as Transaction;
+    this.store.transactions.push(created);
+    this.save();
+    return created;
+  }
+
+  async batchAddTransactions(items: Omit<Transaction, 'id' | 'createdAt'>[]): Promise<Transaction[]> {
+    const created: Transaction[] = [];
+    for (const item of items) created.push(await this.addTransaction(item));
+    return created;
+  }
+
+  async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
+    const idx = this.store.transactions.findIndex(tx => tx.id === id);
+    if (idx === -1) return null;
+    this.store.transactions[idx] = { ...this.store.transactions[idx], ...updates };
+    this.save();
+    return this.store.transactions[idx];
+  }
+
+  async deleteTransaction(id: string): Promise<boolean> {
+    const before = this.store.transactions.length;
+    this.store.transactions = this.store.transactions.filter(tx => tx.id !== id);
+    const deleted = this.store.transactions.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async processRecurringExpenses(targetMonth: string): Promise<Transaction[]> {
+    if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return [];
+
+    const uniqueTemplates = new Map<string, Transaction>();
+    for (const tx of this.store.transactions.filter(t => t.isRecurring)) {
+      if (!uniqueTemplates.has(tx.title)) uniqueTemplates.set(tx.title, tx);
+    }
+
+    const added: Transaction[] = [];
+    for (const template of uniqueTemplates.values()) {
+      const dayNum = template.recurringDay || 1;
+      const date = `${targetMonth}-${String(dayNum).padStart(2, '0')}`;
+      const exists = this.store.transactions.some(tx => tx.title === template.title && matchesMonth(tx.date, targetMonth));
+      if (!exists) {
+        added.push(await this.addTransaction({
+          title: template.title,
+          amount: template.amount,
+          type: template.type || 'EXPENSE',
+          category: template.category,
+          paidBy: template.paidBy,
+          date,
+          vendor: template.vendor,
+          notes: template.notes ? `${template.notes} (Auto Recurring)` : 'Auto generated monthly recurring',
+          isRecurring: false,
+        }));
+      }
+    }
+    return added;
+  }
+
+  async getBudgets(): Promise<Budget[]> {
+    return [...this.store.budgets];
+  }
+
+  async updateBudgets(budgets: Budget[]): Promise<Budget[]> {
+    this.store.budgets = budgets;
+    this.save();
+    return this.store.budgets;
+  }
+
+  async getBills(): Promise<Bill[]> {
+    return [...this.store.bills];
+  }
+
+  async addBill(bill: Omit<Bill, 'id'>): Promise<Bill> {
+    const created = { ...bill, id: genId('bill') };
+    this.store.bills.push(created);
+    this.save();
+    return created;
+  }
+
+  async toggleBillPaid(id: string, isPaid: boolean): Promise<Bill | null> {
+    const bill = this.store.bills.find(b => b.id === id);
+    if (!bill) return null;
+    bill.isPaidThisMonth = isPaid;
+    this.save();
+    return bill;
+  }
+
+  async deleteBill(id: string): Promise<boolean> {
+    const before = this.store.bills.length;
+    this.store.bills = this.store.bills.filter(bill => bill.id !== id);
+    const deleted = this.store.bills.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async getRecurringExpenses(): Promise<RecurringExpense[]> {
+    return [...this.store.recurringExpenses];
+  }
+
+  async addRecurringExpense(item: Omit<RecurringExpense, 'id'>): Promise<RecurringExpense> {
+    const created = { ...item, id: genId('rec') };
+    this.store.recurringExpenses.push(created);
+    this.save();
+    return created;
+  }
+
+  async toggleRecurringExpenseActive(id: string, isActive: boolean): Promise<RecurringExpense | null> {
+    const item = this.store.recurringExpenses.find(rec => rec.id === id);
+    if (!item) return null;
+    item.isActive = isActive;
+    this.save();
+    return item;
+  }
+
+  async deleteRecurringExpense(id: string): Promise<boolean> {
+    const before = this.store.recurringExpenses.length;
+    this.store.recurringExpenses = this.store.recurringExpenses.filter(rec => rec.id !== id);
+    const deleted = this.store.recurringExpenses.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async calculateHouseholdSummary(month?: string): Promise<{ partnerATotalPaid: number; partnerBTotalPaid: number }> {
+    const expenses = this.store.transactions.filter(tx => tx.type === 'EXPENSE' && matchesMonth(tx.date, month));
+    return expenses.reduce(
+      (summary, tx) => {
+        if (tx.paidBy === 'partner_a') summary.partnerATotalPaid += tx.amount;
+        if (tx.paidBy === 'partner_b') summary.partnerBTotalPaid += tx.amount;
+        return summary;
+      },
+      { partnerATotalPaid: 0, partnerBTotalPaid: 0 },
+    );
+  }
+
+  async getThreeMonthTrends(month?: string): Promise<MonthTrendData[]> {
+    const months = month && /^\d{4}-\d{2}$/.test(month) ? [month] : getThreeCalendarMonths();
+    const trends: MonthTrendData[] = [];
+
+    for (const m of months) {
+      const txs = await this.getTransactions(m);
+      const expenses = txs.filter(t => t.type === 'EXPENSE');
+      const income = txs.filter(t => t.type === 'INCOME');
+      const totalExpense = expenses.reduce((s, t) => s + t.amount, 0);
+      const totalIncome = income.reduce((s, t) => s + t.amount, 0);
+      const partnerAExpense = expenses.filter(t => t.paidBy === 'partner_a').reduce((s, t) => s + t.amount, 0);
+      const partnerBExpense = expenses.filter(t => t.paidBy === 'partner_b').reduce((s, t) => s + t.amount, 0);
+      const categoryBreakdown: Record<string, number> = {};
+      for (const t of expenses) categoryBreakdown[t.category] = (categoryBreakdown[t.category] || 0) + t.amount;
+
+      trends.push({
+        monthKey: m,
+        monthLabel: m,
+        totalExpense,
+        totalIncome,
+        totalSavings: totalIncome - totalExpense,
+        savingsRatePct: totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0,
+        partnerAExpense,
+        partnerBExpense,
+        categoryBreakdown,
+      });
+    }
+
+    return trends;
+  }
+}
+
+// ──────────────────────────────────────────────
+// Export: PostgreSQL when configured, otherwise local JSON fallback
+// ──────────────────────────────────────────────
+
+export const db = (process.env.DATABASE_URL || process.env.POSTGRES_URL) ? new PostgresDB() : new LocalFileDB();
