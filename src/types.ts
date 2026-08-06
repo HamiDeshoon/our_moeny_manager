@@ -1,4 +1,7 @@
 
+export const APP_VERSION = '1.4.0';
+export const MIN_TRANSACTION_AMOUNT_TOMAN = 30000;
+
 export type TransactionType = 'EXPENSE' | 'INCOME' | 'TRANSFER';
 
 export type Category =
@@ -113,6 +116,9 @@ export interface AppSettings {
   useJalaliDate?: boolean; // Display Shamsi (Jalali) dates
   noSettlementsMode?: boolean; // Unified household mode (no debt tracking)
   storageMode?: 'postgresql' | 'local_file';
+  appVersion?: string;
+  gitCommitSha?: string;
+  minTransactionAmount?: number;
 }
 
 export interface AIParsedVoice {
@@ -152,4 +158,10 @@ export interface AIInsightResponse {
 export interface HouseholdSummary {
   partnerATotalPaid: number;
   partnerBTotalPaid: number;
+}
+
+export interface IgnoredTransactionResponse {
+  ignored: true;
+  reason: string;
+  minAmount: number;
 }

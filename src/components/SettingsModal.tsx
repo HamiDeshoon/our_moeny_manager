@@ -32,6 +32,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  const storageMode = settings.storageMode || 'local_file';
+  const isCloudStorage = storageMode === 'postgresql';
+  const appVersion = settings.appVersion || '1.4.0';
+  const minTransactionAmount = settings.minTransactionAmount || 30000;
+  const shortCommit = settings.gitCommitSha ? settings.gitCommitSha.slice(0, 7) : '';
+
   useEffect(() => {
     if (settings) {
       setGeminiApiKey(getSavedCustomApiKey() || settings.geminiApiKey || '');
@@ -97,11 +103,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               حالت دیتابیس و نسخه برنامه
             </h3>
             <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-mono font-bold">
-              v1.3.0-live
+              v{appVersion}{shortCommit ? `-${shortCommit}` : ''}
             </span>
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            سیستم در حالت <strong className="text-emerald-400">Cloud Sync (PostgreSQL)</strong> فعال است. اطلاعات به طور مستقیم با دیتابیس متمرکز ابری همگام‌سازی می‌شوند.
+            سیستم در حالت <strong className={isCloudStorage ? 'text-emerald-400' : 'text-amber-400'}>{isCloudStorage ? 'Cloud Sync (PostgreSQL)' : 'Local JSON file'}</strong> فعال است.
+            {isCloudStorage ? ' اطلاعات با دیتابیس ابری همگام‌سازی می‌شوند.' : ' برای Vercel بهتر است DATABASE_URL تنظیم شود تا داده‌ها پایدار بمانند.'}
+          </p>
+          <p className="text-xs text-zinc-500">
+            تراکنش‌های کمتر از {minTransactionAmount.toLocaleString('fa-IR')} تومان ذخیره نمی‌شوند.
           </p>
         </div>
 
@@ -172,7 +182,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Input
                   value={partnerAAvatar}
                   onChange={(e) => setPartnerAAvatar(e.target.value)}
-                  className="!w-14 text-center text-lg !px-1"
+                  className="w-14! text-center text-lg px-1!"
                 />
                 <Input
                   value={partnerAName}
@@ -188,7 +198,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Input
                   value={partnerBAvatar}
                   onChange={(e) => setPartnerBAvatar(e.target.value)}
-                  className="!w-14 text-center text-lg !px-1"
+                  className="w-14! text-center text-lg px-1!"
                 />
                 <Input
                   value={partnerBName}
@@ -256,7 +266,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <Button 
             type="submit"
             isLoading={isSaving}
-            className="flex-[2] bg-indigo-600"
+            className="flex-2 bg-indigo-600"
             leftIcon={<Save className="w-4 h-4" />}
           >
             ذخیره تنظیمات

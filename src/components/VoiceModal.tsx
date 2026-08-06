@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Mic, Sparkles, Send, CheckCircle2, AlertCircle, RefreshCw, Languages } from 'lucide-react';
 import { api } from '../services/api';
-import { AIParsedVoice, AppSettings, Transaction } from '../types';
+import { AIParsedVoice, AppSettings, MIN_TRANSACTION_AMOUNT_TOMAN, Transaction } from '../types';
 import { formatMoney } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
@@ -33,6 +33,21 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const getSupportedAudioOptions = (): MediaRecorderOptions | undefined => {
+    if (typeof MediaRecorder === 'undefined' || typeof MediaRecorder.isTypeSupported !== 'function') {
+      return undefined;
+    }
+
+    const preferredTypes = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/mp4',
+      'audio/mpeg',
+    ];
+    const mimeType = preferredTypes.find((type) => MediaRecorder.isTypeSupported(type));
+    return mimeType ? { mimeType } : undefined;
+  };
+
   const handleToggleListening = async () => {
     if (isListening) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
@@ -42,18 +57,13 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
     }
 
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
         setError('مرورگر شما از ضبط صدا پشتیبانی نمی‌کند. لطفا متن را تایپ کنید.');
         return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const options = MediaRecorder.isTypeSupported('audio/webm')
-        ? { mimeType: 'audio/webm' }
-        : MediaRecorder.isTypeSupported('audio/mp4')
-        ? { mimeType: 'audio/mp4' }
-        : undefined;
-
+      const options = getSupportedAudioOptions();
       const recorder = new MediaRecorder(stream, options);
       audioChunksRef.current = [];
 
@@ -67,20 +77,33 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
         setTranscript('در حال ضبط صدا... (برای پایان، دوباره روی میکروفون بزنید)');
       };
 
+      recorder.onerror = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        setIsListening(false);
+        setError('ضبط صدا با خطا مواجه شد. لطفا دوباره تلاش کنید یا متن را تایپ کنید.');
+      };
+
       recorder.onstop = () => {
         setIsListening(false);
-        const audioBlob = new Blob(audioChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        const audioMimeType = recorder.mimeType || options?.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
         stream.getTracks().forEach((track) => track.stop());
+
+        if (audioBlob.size === 0) {
+          setError('صدایی ضبط نشد. لطفا دوباره تلاش کنید یا متن را تایپ کنید.');
+          setTranscript('');
+          return;
+        }
 
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64data = reader.result as string;
-          handleParseAudio(base64data, recorder.mimeType || 'audio/webm');
+          handleParseAudio(base64data, audioMimeType);
         };
         reader.readAsDataURL(audioBlob);
       };
 
-      recorder.start();
+      recorder.start(1000);
       mediaRecorderRef.current = recorder;
     } catch (err: any) {
       console.error('Error starting audio recording:', err);
@@ -95,7 +118,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
     setParsedResult(null);
 
     try {
-      const result = await api.parseVoice({ audioBase64: base64data, mimeType });
+      const result = await api.parseVoice({ audioBase64: base64data, mimeType, speechLang });
       setParsedResult(result);
       setEditableAmount(result.amount || result.monthlyLimit || 0);
       setTranscript(`(صدا با موفقیت پردازش شد)`);
@@ -134,6 +157,11 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
     try {
       const amount = typeof editableAmount === 'number' ? editableAmount : Number(editableAmount) || 0;
       const action = parsedResult.actionType || 'LOG_EXPENSE';
+
+      if (action === 'LOG_EXPENSE' && amount > 0 && amount < MIN_TRANSACTION_AMOUNT_TOMAN) {
+        setError(`تراکنش‌های کمتر از ${formatMoney(MIN_TRANSACTION_AMOUNT_TOMAN, settings.currencySymbol)} نادیده گرفته می‌شوند.`);
+        return;
+      }
 
       if (action === 'SET_BUDGET') {
         const currentBudgets = await api.getBudgets();
@@ -284,7 +312,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
 
         {error && (
           <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-start space-x-3 text-sm text-rose-400">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <AlertCircle className="w-5 h-5 shrink-0" />
             <span>{error}</span>
           </div>
         )}
@@ -307,7 +335,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
                 <span className="font-medium text-zinc-200">{parsedResult.title || parsedResult.category}</span>
               </div>
               <div>
-                <span className="text-zinc-500 block mb-1 flex items-center justify-between">
+                <span className="text-zinc-500 mb-1 flex items-center justify-between">
                   مبلغ:
                   <button
                     onClick={() => {
@@ -323,7 +351,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
                   type="number"
                   value={editableAmount}
                   onChange={(e) => setEditableAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="!px-3 !py-1.5 font-mono"
+                  className="px-3! py-1.5! font-mono"
                 />
                 <span className="text-[10px] text-zinc-500 block mt-1">
                   {formatMoney(typeof editableAmount === 'number' ? editableAmount : 0, settings.currencySymbol)}

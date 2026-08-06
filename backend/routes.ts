@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from './db.js';
 import { analyzeSpendingInsights, parseExcelOrSheetWithGemini, parseVoiceMemo, scanReceiptImage } from './geminiService.js';
+import { APP_VERSION, MIN_TRANSACTION_AMOUNT_TOMAN } from '../src/types.js';
 
 export const apiRouter = Router();
 
@@ -17,6 +18,7 @@ const publicReadPaths = new Set([
   '/bills',
   '/recurring-expenses',
   '/analytics/three-months',
+  '/version',
 ]);
 
 const authMiddleware = (req: any, res: any, next: any) => {
@@ -42,6 +44,14 @@ const authMiddleware = (req: any, res: any, next: any) => {
 apiRouter.use(authMiddleware);
 
 // --- AUTHENTICATION ---
+apiRouter.get('/version', (_req, res) => {
+  res.json({
+    version: APP_VERSION,
+    gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || '',
+    minTransactionAmount: MIN_TRANSACTION_AMOUNT_TOMAN,
+  });
+});
+
 apiRouter.post('/auth/login', (req, res) => {
   try {
     const { username, password } = req.body;
@@ -80,6 +90,9 @@ apiRouter.get('/settings', async (req, res) => {
       maskedKey,
       hasCustomKey: Boolean(settings.geminiApiKey),
       storageMode,
+      appVersion: APP_VERSION,
+      gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || '',
+      minTransactionAmount: MIN_TRANSACTION_AMOUNT_TOMAN,
     });
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
@@ -114,17 +127,32 @@ apiRouter.get('/transactions', async (req, res) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+function isBelowMinTransactionAmount(tx: any): boolean {
+  return Number(tx?.amount || 0) > 0 && Number(tx.amount) < MIN_TRANSACTION_AMOUNT_TOMAN;
+}
+
 apiRouter.post('/transactions/batch', async (req, res) => {
   try {
     const items = req.body.transactions;
     if (!Array.isArray(items) || items.length === 0) return res.status(400).json({ error: 'transactions array is required' });
-    const createdList = await db.batchAddTransactions(items);
-    res.json({ success: true, count: createdList.length, created: createdList });
+    const filteredItems = items.filter((tx) => !isBelowMinTransactionAmount(tx));
+    const ignoredCount = items.length - filteredItems.length;
+    const createdList = filteredItems.length > 0 ? await db.batchAddTransactions(filteredItems) : [];
+    res.json({ success: true, count: createdList.length, ignoredCount, minAmount: MIN_TRANSACTION_AMOUNT_TOMAN, created: createdList });
   } catch (err: any) { res.status(400).json({ error: err.message }); }
 });
 
 apiRouter.post('/transactions', async (req, res) => {
-  try { res.json(await db.addTransaction(req.body)); }
+  try {
+    if (isBelowMinTransactionAmount(req.body)) {
+      return res.json({
+        ignored: true,
+        reason: `Transactions below ${MIN_TRANSACTION_AMOUNT_TOMAN} تومان are ignored.`,
+        minAmount: MIN_TRANSACTION_AMOUNT_TOMAN,
+      });
+    }
+    res.json(await db.addTransaction(req.body));
+  }
   catch (err: any) { res.status(400).json({ error: err.message }); }
 });
 
@@ -220,11 +248,11 @@ apiRouter.delete('/bills/:id', async (req, res) => {
 // --- GEMINI AI ENDPOINTS ---
 apiRouter.post('/ai/parse-voice', async (req, res) => {
   try {
-    const { transcript, audioBase64, mimeType } = req.body;
+    const { transcript, audioBase64, mimeType, speechLang } = req.body;
     if (!transcript && !audioBase64) return res.status(400).json({ error: 'Transcript or audio data is required' });
     const settings = await db.getSettings();
     const customKey = (req.headers['x-gemini-key'] as string) || settings.geminiApiKey;
-    const input = audioBase64 ? { audioBase64, mimeType } : transcript;
+    const input = audioBase64 ? { audioBase64, mimeType, speechLang } : transcript;
     const parsed = await parseVoiceMemo(input as any, settings.partnerA, settings.partnerB, settings.currencySymbol || 'تومان', customKey);
     res.json(parsed);
   } catch (err: any) {

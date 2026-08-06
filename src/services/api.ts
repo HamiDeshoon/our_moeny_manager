@@ -10,6 +10,7 @@ import {
   MonthTrendData,
   RecurringExpense,
   HouseholdSummary,
+  IgnoredTransactionResponse,
   Transaction,
 } from '../types';
 
@@ -90,6 +91,8 @@ export const api = {
   // Settings
   getSettings: () =>
     fetchJSON<AppSettings & { hasEnvKey: boolean; maskedKey: string; hasCustomKey: boolean }>('/settings'),
+  getVersion: () =>
+    fetchJSON<{ version: string; gitCommitSha: string; minTransactionAmount: number }>('/version'),
   updateSettings: (settings: Partial<AppSettings>) =>
     fetchJSON<AppSettings>('/settings', { method: 'POST', body: JSON.stringify(settings) }),
   testApiKey: (geminiApiKey?: string) =>
@@ -107,12 +110,17 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ month }) },
     ),
   batchAddTransactions: (transactions: Omit<Transaction, 'id' | 'createdAt'>[]) =>
-    fetchJSON<{ success: boolean; count: number; created: Transaction[] }>('/transactions/batch', {
+    fetchJSON<{ success: boolean; count: number; ignoredCount: number; minAmount: number; created: Transaction[] }>('/transactions/batch', {
       method: 'POST',
       body: JSON.stringify({ transactions }),
     }),
-  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) =>
-    fetchJSON<Transaction>('/transactions', { method: 'POST', body: JSON.stringify(tx) }),
+  addTransaction: async (tx: Omit<Transaction, 'id' | 'createdAt'>) => {
+    const result = await fetchJSON<Transaction | IgnoredTransactionResponse>('/transactions', {
+      method: 'POST',
+      body: JSON.stringify(tx),
+    });
+    return 'ignored' in result ? null : result;
+  },
   updateTransaction: (id: string, tx: Partial<Transaction>) =>
     fetchJSON<Transaction>(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(tx) }),
   deleteTransaction: (id: string) =>
@@ -149,7 +157,7 @@ export const api = {
     fetchJSON<{ success: boolean }>(`/bills/${id}`, { method: 'DELETE' }),
 
   // Gemini AI Features
-  parseVoice: (input: string | { audioBase64: string; mimeType: string }) =>
+  parseVoice: (input: string | { audioBase64: string; mimeType: string; speechLang?: string }) =>
     fetchJSON<AIParsedVoice>('/ai/parse-voice', {
       method: 'POST',
       body: JSON.stringify(typeof input === 'string' ? { transcript: input } : input),

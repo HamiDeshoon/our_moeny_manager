@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { apiRouter } from './backend/routes.js';
+import { APP_VERSION } from './src/types.js';
 
 async function startServer() {
   const app = express();
@@ -17,7 +18,12 @@ async function startServer() {
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', service: 'DuoSpend Full-Stack Household Expense App' });
+    res.json({
+      status: 'ok',
+      service: 'DuoSpend Full-Stack Household Expense App',
+      version: APP_VERSION,
+      gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || '',
+    });
   });
 
   // Vite development vs production static file serving

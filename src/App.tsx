@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Mic, Camera, RefreshCw } from 'lucide-react';
 import { api } from './services/api';
-import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, Transaction } from './types';
+import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, MIN_TRANSACTION_AMOUNT_TOMAN, Transaction } from './types';
 import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
 import { haptic } from './utils/haptics';
 import { usePullToRefresh } from './utils/usePullToRefresh';
@@ -119,6 +119,10 @@ export default function App() {
   // Handlers with haptic feedback
   const handleSaveTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
+    if (Number(txData.amount || 0) > 0 && Number(txData.amount) < MIN_TRANSACTION_AMOUNT_TOMAN) {
+      haptic('warning');
+      return;
+    }
     haptic('success');
     if (editingTransaction) {
       const updated = await api.updateTransaction(editingTransaction.id, txData);
@@ -126,7 +130,7 @@ export default function App() {
       setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
     } else {
       const created = await api.addTransaction(txData);
-      setTransactions(prev => [created, ...prev]);
+      if (created) setTransactions(prev => [created, ...prev]);
     }
     api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
   }, [currentUser, editingTransaction, selectedMonth]);

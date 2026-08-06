@@ -196,8 +196,17 @@ function validateSheetResult(data: AIParsedSheetResult): string | null {
 // Voice Memo Parser
 // ──────────────────────────────────────────────
 
+function cleanAudioDataUrl(audioBase64: string): string {
+  return audioBase64.replace(/^data:(audio|video)\/[^;]+(?:;codecs=[^;]+)?;base64,/i, '');
+}
+
+function normalizeAudioMimeType(mimeType?: string): string {
+  const cleanType = (mimeType || 'audio/webm').split(';')[0].trim().toLowerCase();
+  return cleanType || 'audio/webm';
+}
+
 export async function parseVoiceMemo(
-  input: string | { audioBase64: string; mimeType: string },
+  input: string | { audioBase64: string; mimeType: string; speechLang?: string },
   partnerA: { id: string; name: string },
   partnerB: { id: string; name: string },
   currencySymbol: string = 'تومان',
@@ -208,13 +217,14 @@ export async function parseVoiceMemo(
   const isAudio = typeof input !== 'string';
   const transcript = isAudio ? '' : (input as string);
   const cleanedTranscript = isAudio ? '' : normalizePersianInput(transcript);
+  const speechLang = isAudio ? ((input as { speechLang?: string }).speechLang || 'fa-IR') : undefined;
 
   const prompt = `
 You are an intelligent household expense & budget assistant fluent in both PERSIAN (Farsi) and ENGLISH for a couple (${partnerA.name} [id: ${partnerA.id}] and ${partnerB.name} [id: ${partnerB.id}]).
 Analyze the input memo and detect the user's INTENTION (actionType):
 
-${isAudio ? 'The user has provided an AUDIO recording of their voice. Please listen and parse the spoken expense information.' : `ORIGINAL INPUT: "${transcript}"
-CLEANED TRANSCRIPT: "${cleanedTranscript}"`}
+	${isAudio ? `The user has provided an AUDIO recording of their voice. Please listen and parse the spoken expense information. Spoken language hint: ${speechLang}.` : `ORIGINAL INPUT: "${transcript}"
+	CLEANED TRANSCRIPT: "${cleanedTranscript}"`}
 
 CONTEXT:
 - Today's date is: ${todayStr}
@@ -267,8 +277,8 @@ Output valid JSON matching the schema.
       let contents: any = prompt;
       if (isAudio) {
         const audioData = input as { audioBase64: string; mimeType: string };
-        const cleanB64 = audioData.audioBase64.replace(/^data:audio\/\w+;base64,/, '').replace(/^data:video\/\w+;base64,/, '');
-        contents = { parts: [{ inlineData: { data: cleanB64, mimeType: audioData.mimeType } }, { text: prompt }] };
+        const cleanB64 = cleanAudioDataUrl(audioData.audioBase64);
+        contents = { parts: [{ inlineData: { data: cleanB64, mimeType: normalizeAudioMimeType(audioData.mimeType) } }, { text: prompt }] };
       }
       const response = await ai.models.generateContent({
         model: MODEL,

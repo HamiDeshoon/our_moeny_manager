@@ -1,5 +1,7 @@
 {
   "version": 2,
+  "framework": "vite",
+  "installCommand": "npm ci",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
@@ -9,8 +11,16 @@
   },
   "rewrites": [
     {
+      "source": "/api",
+      "destination": "/api/[[...path]]"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/[[...path]]"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
