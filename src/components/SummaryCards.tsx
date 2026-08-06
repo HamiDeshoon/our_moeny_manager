@@ -29,18 +29,28 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 relative overflow-hidden shadow-sm"
+          className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 relative overflow-hidden shadow-2xl shadow-indigo-500/10"
         >
-          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-sky-500 to-emerald-500" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-              کل هزینه‌های خانه
-            </span>
-            <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400 border border-indigo-500/20">
-              <Wallet className="w-4 h-4" />
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 opacity-80" />
+          <div className="absolute -right-12 -top-12 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full" />
+          
+          <div className="flex items-start justify-between relative z-10">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                کل هزینه‌های خانه
+              </span>
+              <div className="mt-1">
+                <span className="inline-flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-indigo-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  v1.3.0-live
+                </span>
+              </div>
+            </div>
+            <div className="p-2.5 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20 shadow-inner">
+              <Wallet className="w-5 h-5" />
             </div>
           </div>
-          <div className="mt-2 flex items-baseline space-x-2">
+          <div className="mt-4 flex items-baseline space-x-2 relative z-10">
             <span className="text-xl sm:text-3xl font-bold text-white">
               {formatMoney(totalSpent, symbol)}
             </span>
@@ -73,23 +83,23 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 shadow-sm relative overflow-hidden group"
+          className="bg-black/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group"
         >
-          <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 duration-500" style={{ backgroundColor: settings.partnerA.color }} />
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20 blur-2xl transition-transform group-hover:scale-110 duration-700" style={{ backgroundColor: settings.partnerA.color }} />
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-1.5 sm:space-x-2 min-w-0">
-              <span className="text-lg">{settings.partnerA.avatar}</span>
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 truncate">
-                پرداختی {settings.partnerA.name}
-              </span>
+            <div className="flex items-center gap-2 sm:space-x-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-white/5 border border-white/10 shadow-inner">
+                {settings.partnerA.avatar}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 truncate">
+                  پرداختی {settings.partnerA.name}
+                </span>
+              </div>
             </div>
-            <span
-              className="w-2.5 h-2.5 rounded-full shadow-sm"
-              style={{ backgroundColor: settings.partnerA.color, boxShadow: `0 0 10px ${settings.partnerA.color}` }}
-            />
           </div>
-          <div className="mt-2 relative z-10">
-            <span className="text-xl sm:text-3xl font-bold text-white">
+          <div className="mt-4 relative z-10">
+            <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {formatMoney(summary.partnerATotalPaid, symbol)}
             </span>
           </div>
@@ -99,23 +109,23 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-zinc-900 border border-white/10 rounded-2xl p-3.5 sm:p-5 shadow-sm relative overflow-hidden group"
+          className="bg-black/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group"
         >
-          <div className="absolute -right-4 -top-4 w-24 h-24 rounded-full opacity-10 transition-transform group-hover:scale-150 duration-500" style={{ backgroundColor: settings.partnerB.color }} />
+          <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20 blur-2xl transition-transform group-hover:scale-110 duration-700" style={{ backgroundColor: settings.partnerB.color }} />
           <div className="flex items-center justify-between relative z-10">
-            <div className="flex items-center gap-1.5 sm:space-x-2 min-w-0">
-              <span className="text-lg">{settings.partnerB.avatar}</span>
-              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-zinc-400 truncate">
-                پرداختی {settings.partnerB.name}
-              </span>
+            <div className="flex items-center gap-2 sm:space-x-3 min-w-0">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-white/5 border border-white/10 shadow-inner">
+                {settings.partnerB.avatar}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-zinc-400 truncate">
+                  پرداختی {settings.partnerB.name}
+                </span>
+              </div>
             </div>
-            <span
-              className="w-2.5 h-2.5 rounded-full shadow-sm"
-              style={{ backgroundColor: settings.partnerB.color, boxShadow: `0 0 10px ${settings.partnerB.color}` }}
-            />
           </div>
-          <div className="mt-2 relative z-10">
-            <span className="text-xl sm:text-3xl font-bold text-white">
+          <div className="mt-4 relative z-10">
+            <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {formatMoney(summary.partnerBTotalPaid, symbol)}
             </span>
           </div>
