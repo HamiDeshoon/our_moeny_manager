@@ -112,6 +112,7 @@ export interface AppSettings {
   isRtl?: boolean;
   useJalaliDate?: boolean; // Display Shamsi (Jalali) dates
   noSettlementsMode?: boolean; // Unified household mode (no debt tracking)
+  storageMode?: 'postgresql' | 'local_file';
 }
 
 export interface AIParsedVoice {

@@ -86,6 +86,10 @@ class PostgresDB {
     this.ready = this.init();
   }
 
+  getStorageMode(): 'postgresql' | 'local_file' {
+    return 'postgresql';
+  }
+
   private async init() {
     try {
       await this.migrate();
@@ -516,11 +520,23 @@ class FileDB {
     return initial;
   }
 
+  getStorageMode(): 'postgresql' | 'local_file' {
+    return 'local_file';
+  }
+
   private saveData(d: DatabaseStore = this.data) {
     try {
       if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
       fs.writeFileSync(DATA_FILE, JSON.stringify(d, null, 2), 'utf-8');
-    } catch (err) { console.error('Failed to save:', err); }
+    } catch (err) {
+      // Fallback for read-only serverless filesystems (e.g. Vercel)
+      try {
+        const tmpFile = path.join('/tmp', 'store.json');
+        fs.writeFileSync(tmpFile, JSON.stringify(d, null, 2), 'utf-8');
+      } catch (tmpErr) {
+        console.warn('[FileDB] Notice: File persistence unavailable in read-only environment. Operating in memory.');
+      }
+    }
   }
 
   async getSettings(): Promise<AppSettings> {

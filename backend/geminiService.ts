@@ -2,26 +2,34 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
 import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult } from '../src/types.js';
 
-const MODEL = 'gemini-3.5-flash-lite';
+const MODEL = 'gemini-2.5-flash';
 
 // ──────────────────────────────────────────────
 // Gemini Client Factory
 // ──────────────────────────────────────────────
 
 function getGeminiClient(customKey?: string) {
-  const settingsKey = db.getSettings()?.geminiApiKey;
-  const rawKey = (customKey && customKey.trim()) || (settingsKey && settingsKey.trim()) || process.env.GEMINI_API_KEY || '';
+  let settingsKey = '';
+  try {
+    const s = db.getSettings();
+    if (s && typeof s.then !== 'function') {
+      settingsKey = s.geminiApiKey || '';
+    }
+  } catch {
+    // Ignore settings fetch errors
+  }
+
+  const rawKey =
+    (customKey && customKey.trim()) ||
+    (settingsKey && settingsKey.trim()) ||
+    process.env.GEMINI_API_KEY ||
+    process.env.VITE_GEMINI_API_KEY ||
+    '';
   const apiKey = rawKey.trim().replace(/^["']|["']$/g, '');
 
   if (!apiKey) {
     throw new Error(
-      'کلید API جمینای تنظیم نشده است. لطفا کلید خود را در قسمت تنظیمات (Settings) وارد کرده و ذخیره کنید.'
-    );
-  }
-
-  if (!apiKey.startsWith('AIzaSy')) {
-    throw new Error(
-      'فرمت کلید API اشتباه است. کلید معتبر Gemini API همیشه با عبارت "AIzaSy" شروع می‌شود (توکن‌های session مرورگر یا OAuth قابل استفاده نیستند). لطفاً کلید جدید را از aistudio.google.com/app/apikey دریافت کنید.'
+      'کلید API جمینای تنظیم نشده است. لطفا کلید خود را در قسمت تنظیمات (Settings) وارد کرده یا در فایل env قرار دهید.'
     );
   }
 

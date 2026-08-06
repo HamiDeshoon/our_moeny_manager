@@ -54,6 +54,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden md:inline-flex bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
                   Couple Finance
                 </span>
+                {settings.storageMode === 'postgresql' ? (
+                  <span title="دیتابیس ابری متصل است (PostgreSQL Cloud Sync Active)" className="hidden xl:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    همگام‌سازی ابری
+                  </span>
+                ) : (
+                  <span title="اطلاعات در فایل محلی (data/store.json) ذخیره می‌شود. جهت همگام‌سازی چند دستگاهی، DATABASE_URL را در env قرار دهید" className="hidden xl:inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-amber-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                    ذخیره محلی (Local File)
+                  </span>
+                )}
               </div>
               <p className="text-xs text-zinc-400 hidden lg:block">
                 {settings.partnerA.name} {settings.partnerA.avatar} & {settings.partnerB.name} {settings.partnerB.avatar}
