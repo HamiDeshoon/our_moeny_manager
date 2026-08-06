@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
                   DuoSpend
                   <span className="bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">
-                    v1.2.0-cloud
+                    v1.3.0-live
                   </span>
                 </span>
                 <span className="hidden md:inline-flex bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">

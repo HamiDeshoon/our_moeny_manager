@@ -97,7 +97,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               حالت دیتابیس و نسخه برنامه
             </h3>
             <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-mono font-bold">
-              v1.2.0-cloud
+              v1.3.0-live
             </span>
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
