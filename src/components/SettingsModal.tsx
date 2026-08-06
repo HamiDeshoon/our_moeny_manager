@@ -89,27 +89,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <p>مدیریت کلید API، پروفایل اعضا و ترجیحات نمایشی.</p>
         </div>
 
-        {/* Storage Status */}
+        {/* Storage Status & Version */}
         <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-2">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-300 flex items-center gap-2">
-              <Database className="w-4 h-4 text-indigo-400" />
-              وضعیت دیتابیس و همگام‌سازی
+              <Database className="w-4 h-4 text-emerald-400" />
+              حالت دیتابیس و نسخه برنامه
             </h3>
-            {settings?.storageMode === 'postgresql' ? (
-              <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-medium">
-                PostgreSQL Cloud
-              </span>
-            ) : (
-              <span className="bg-amber-500/10 text-amber-400 text-xs px-2.5 py-1 rounded-full border border-amber-500/20 font-medium">
-                ذخیره محلی (data/store.json)
-              </span>
-            )}
+            <span className="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-full border border-emerald-500/20 font-mono font-bold">
+              v1.2.0-cloud
+            </span>
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            {settings?.storageMode === 'postgresql'
-              ? 'برنامه به دیتابیس ابری متصل است و اطلاعات بین تمام دستگاه‌ها همگام‌سازی می‌شود.'
-              : 'داده‌ها در فایل محلی روی این سرور ذخیره می‌شوند. برای همگام‌سازی ابری بین چند گوشی، متغیر DATABASE_URL را در .env قرار دهید.'}
+            سیستم در حالت <strong className="text-emerald-400">Cloud Sync (PostgreSQL)</strong> فعال است. اطلاعات به طور مستقیم با دیتابیس متمرکز ابری همگام‌سازی می‌شوند.
           </p>
         </div>
 

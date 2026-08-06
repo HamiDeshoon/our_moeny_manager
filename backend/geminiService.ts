@@ -9,19 +9,8 @@ const MODEL = 'gemini-2.5-flash';
 // ──────────────────────────────────────────────
 
 function getGeminiClient(customKey?: string) {
-  let settingsKey = '';
-  try {
-    const s = db.getSettings();
-    if (s && typeof s.then !== 'function') {
-      settingsKey = s.geminiApiKey || '';
-    }
-  } catch {
-    // Ignore settings fetch errors
-  }
-
   const rawKey =
     (customKey && customKey.trim()) ||
-    (settingsKey && settingsKey.trim()) ||
     process.env.GEMINI_API_KEY ||
     process.env.VITE_GEMINI_API_KEY ||
     '';

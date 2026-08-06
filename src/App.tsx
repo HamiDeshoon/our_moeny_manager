@@ -121,55 +121,58 @@ export default function App() {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
     if (editingTransaction) {
-      await api.updateTransaction(editingTransaction.id, txData);
+      const updated = await api.updateTransaction(editingTransaction.id, txData);
       setEditingTransaction(null);
+      setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
     } else {
-      await api.addTransaction(txData);
+      const created = await api.addTransaction(txData);
+      setTransactions(prev => [created, ...prev]);
     }
-    await loadData();
-  }, [editingTransaction]);
+    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
+  }, [currentUser, editingTransaction, selectedMonth]);
 
   const handleDeleteTransaction = useCallback(async (id: string) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteTransaction(id);
-    await loadData();
-  }, []);
+    setTransactions(prev => prev.filter(t => t.id !== id));
+    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
+  }, [currentUser, selectedMonth]);
 
   const handleUpdateBudgets = useCallback(async (newBudgets: Budget[]) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.updateBudgets(newBudgets);
-    await loadData();
-  }, []);
+    const updated = await api.updateBudgets(newBudgets);
+    setBudgets(updated);
+  }, [currentUser]);
 
   const handleToggleBillPaid = useCallback(async (id: string, isPaid: boolean) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.toggleBillPaid(id, isPaid);
-    await loadData();
-  }, []);
+    const updated = await api.toggleBillPaid(id, isPaid);
+    setBills(prev => prev.map(b => b.id === id ? updated : b));
+  }, [currentUser]);
 
   const handleAddBill = useCallback(async (billData: Omit<Bill, 'id'>) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('success');
-    await api.addBill(billData);
-    await loadData();
-  }, []);
+    const created = await api.addBill(billData);
+    setBills(prev => [...prev, created]);
+  }, [currentUser]);
 
   const handleDeleteBill = useCallback(async (id: string) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('warning');
     await api.deleteBill(id);
-    await loadData();
-  }, []);
+    setBills(prev => prev.filter(b => b.id !== id));
+  }, [currentUser]);
 
   const handleUpdateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
     if (!currentUser) { setIsLoginModalOpen(true); return; }
     haptic('light');
-    await api.updateSettings(newSettings);
-    await loadData();
-  }, []);
+    const updated = await api.updateSettings(newSettings);
+    setSettings(updated);
+  }, [currentUser]);
 
   const handleTabChange = (tab: typeof activeTab) => {
     haptic('light');
