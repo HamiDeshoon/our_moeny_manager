@@ -2,7 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
 import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult } from '../src/types.js';
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
 // ──────────────────────────────────────────────
 // Gemini Client Factory
@@ -103,6 +103,15 @@ async function callGeminiWithRetry<T>(
       console.error(
         `[${label}] Attempt ${attempt}/${maxRetries} — error: ${errMsg}`
       );
+      if (
+        errMsg.includes('404') ||
+        errMsg.includes('NOT_FOUND') ||
+        errMsg.includes('no longer available')
+      ) {
+        throw new Error(
+          `مدل هوش مصنوعی در دسترس نیست (${errMsg.includes('no longer available') ? 'مدل بازنشسته شده' : 'ارور ۴۰۴'}). سیستم به‌صورت خودکار به مدل gemini-3.6-flash به‌روزرسانی شده است.`
+        );
+      }
       if (
         errMsg.includes('403') ||
         errMsg.includes('401') ||
