@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Pool } from 'pg';
-import { AppSettings, Bill, Budget, MonthTrendData, RecurringExpense, Transaction } from '../src/types.js';
+import { AppSettings, Bill, Budget, CycleLog, CycleSettings, MonthTrendData, RecurringExpense, Transaction } from '../src/types.js';
 
 // ──────────────────────────────────────────────
 // Default data (shared between both storage modes)
@@ -93,12 +93,23 @@ function normalizeSettings(settings: AppSettings): AppSettings {
   return normalized;
 }
 
+const DEFAULT_CYCLE_SETTINGS: CycleSettings = {
+  cycleLength: 28,
+  periodLength: 5,
+  lutealLength: 14,
+  lastPeriodStart: '',
+  trackPartnerId: 'partner_b',
+  partnerNotes: 'چرخه سلامت و تقویم قاعدگی',
+};
+
 type StoreData = {
   settings: AppSettings;
   transactions: Transaction[];
   budgets: Budget[];
   bills: Bill[];
   recurringExpenses: RecurringExpense[];
+  cycleLogs: CycleLog[];
+  cycleSettings: CycleSettings;
 };
 
 // ──────────────────────────────────────────────
@@ -198,6 +209,24 @@ class PostgresDB {
         is_active BOOLEAN DEFAULT true,
         notes TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS cycle_logs (
+        date TEXT PRIMARY KEY,
+        flow TEXT,
+        symptoms JSONB,
+        mood JSONB,
+        pain_level INTEGER DEFAULT 0,
+        notes TEXT,
+        is_period_start BOOLEAN DEFAULT false,
+        is_period_end BOOLEAN DEFAULT false,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS cycle_settings (
+        id INTEGER PRIMARY KEY DEFAULT 1,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      );
     `);
   }
 
@@ -206,6 +235,12 @@ class PostgresDB {
     const settingsExist = await this.pool.query('SELECT 1 FROM settings WHERE id = 1');
     if (settingsExist.rowCount === 0) {
       await this.pool.query('INSERT INTO settings (id, data) VALUES (1, $1)', [JSON.stringify(DEFAULT_SETTINGS)]);
+    }
+
+    // Seed cycle settings
+    const cycleSetExist = await this.pool.query('SELECT 1 FROM cycle_settings WHERE id = 1');
+    if (cycleSetExist.rowCount === 0) {
+      await this.pool.query('INSERT INTO cycle_settings (id, data) VALUES (1, $1)', [JSON.stringify(DEFAULT_CYCLE_SETTINGS)]);
     }
 
     // Seed transactions
@@ -511,6 +546,73 @@ class PostgresDB {
     }
     return trends;
   }
+
+  // ── Cycle & Period Tracking ──
+  async getCycleLogs(): Promise<CycleLog[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM cycle_logs ORDER BY date DESC');
+    return res.rows.map(r => ({
+      date: r.date,
+      flow: r.flow || undefined,
+      symptoms: Array.isArray(r.symptoms) ? r.symptoms : (typeof r.symptoms === 'string' ? JSON.parse(r.symptoms) : []),
+      mood: Array.isArray(r.mood) ? r.mood : (typeof r.mood === 'string' ? JSON.parse(r.mood) : []),
+      painLevel: Number(r.pain_level || 0),
+      notes: r.notes || undefined,
+      isPeriodStart: Boolean(r.is_period_start),
+      isPeriodEnd: Boolean(r.is_period_end),
+    }));
+  }
+
+  async saveCycleLog(log: CycleLog): Promise<CycleLog> {
+    await this.ensureReady();
+    await this.pool.query(
+      `INSERT INTO cycle_logs (date, flow, symptoms, mood, pain_level, notes, is_period_start, is_period_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       ON CONFLICT (date) DO UPDATE SET
+         flow = EXCLUDED.flow,
+         symptoms = EXCLUDED.symptoms,
+         mood = EXCLUDED.mood,
+         pain_level = EXCLUDED.pain_level,
+         notes = EXCLUDED.notes,
+         is_period_start = EXCLUDED.is_period_start,
+         is_period_end = EXCLUDED.is_period_end`,
+      [
+        log.date,
+        log.flow || null,
+        JSON.stringify(log.symptoms || []),
+        JSON.stringify(log.mood || []),
+        log.painLevel || 0,
+        log.notes || null,
+        log.isPeriodStart || false,
+        log.isPeriodEnd || false,
+      ]
+    );
+    return log;
+  }
+
+  async deleteCycleLog(date: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM cycle_logs WHERE date = $1', [date]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  async getCycleSettings(): Promise<CycleSettings> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT data FROM cycle_settings WHERE id = 1');
+    if (res.rows[0]) return { ...DEFAULT_CYCLE_SETTINGS, ...res.rows[0].data };
+    return DEFAULT_CYCLE_SETTINGS;
+  }
+
+  async updateCycleSettings(newSettings: Partial<CycleSettings>): Promise<CycleSettings> {
+    await this.ensureReady();
+    const current = await this.getCycleSettings();
+    const updated = { ...current, ...newSettings };
+    await this.pool.query(
+      'INSERT INTO cycle_settings (id, data, updated_at) VALUES (1, $1, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()',
+      [JSON.stringify(updated)]
+    );
+    return updated;
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -538,6 +640,8 @@ class LocalFileDB {
         budgets: [...DEFAULT_BUDGETS],
         bills: [...DEFAULT_BILLS],
         recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
+        cycleLogs: [],
+        cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initialStore, null, 2));
       return initialStore;
@@ -551,6 +655,8 @@ class LocalFileDB {
         budgets: Array.isArray(parsed.budgets) ? parsed.budgets : [...DEFAULT_BUDGETS],
         bills: Array.isArray(parsed.bills) ? parsed.bills : [...DEFAULT_BILLS],
         recurringExpenses: Array.isArray(parsed.recurringExpenses) ? parsed.recurringExpenses : [...DEFAULT_RECURRING_EXPENSES],
+        cycleLogs: Array.isArray(parsed.cycleLogs) ? parsed.cycleLogs : [],
+        cycleSettings: parsed.cycleSettings ? { ...DEFAULT_CYCLE_SETTINGS, ...parsed.cycleSettings } : { ...DEFAULT_CYCLE_SETTINGS },
       };
     } catch (err) {
       console.error('[LocalFileDB] Failed to read store.json; using defaults:', err);
@@ -560,6 +666,8 @@ class LocalFileDB {
         budgets: [...DEFAULT_BUDGETS],
         bills: [...DEFAULT_BILLS],
         recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
+        cycleLogs: [],
+        cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(fallbackStore, null, 2));
       return fallbackStore;
@@ -786,6 +894,42 @@ class LocalFileDB {
     }
 
     return trends;
+  }
+
+  // ── Cycle & Period Tracking ──
+  async getCycleLogs(): Promise<CycleLog[]> {
+    return (this.store.cycleLogs || []).sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async saveCycleLog(log: CycleLog): Promise<CycleLog> {
+    if (!this.store.cycleLogs) this.store.cycleLogs = [];
+    const idx = this.store.cycleLogs.findIndex(l => l.date === log.date);
+    if (idx >= 0) {
+      this.store.cycleLogs[idx] = { ...this.store.cycleLogs[idx], ...log };
+    } else {
+      this.store.cycleLogs.push(log);
+    }
+    this.save();
+    return log;
+  }
+
+  async deleteCycleLog(date: string): Promise<boolean> {
+    if (!this.store.cycleLogs) return false;
+    const before = this.store.cycleLogs.length;
+    this.store.cycleLogs = this.store.cycleLogs.filter(l => l.date !== date);
+    const deleted = this.store.cycleLogs.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async getCycleSettings(): Promise<CycleSettings> {
+    return { ...DEFAULT_CYCLE_SETTINGS, ...(this.store.cycleSettings || {}) };
+  }
+
+  async updateCycleSettings(newSettings: Partial<CycleSettings>): Promise<CycleSettings> {
+    this.store.cycleSettings = { ...DEFAULT_CYCLE_SETTINGS, ...(this.store.cycleSettings || {}), ...newSettings };
+    this.save();
+    return this.store.cycleSettings;
   }
 }
 

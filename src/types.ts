@@ -165,3 +165,42 @@ export interface IgnoredTransactionResponse {
   reason: string;
   minAmount: number;
 }
+
+// ──────────────────────────────────────────────
+// Menstrual Cycle & Period Calendar Types
+// ──────────────────────────────────────────────
+
+export type FlowIntensity = 'none' | 'spotting' | 'light' | 'medium' | 'heavy';
+
+export interface CycleLog {
+  date: string; // YYYY-MM-DD
+  flow?: FlowIntensity;
+  symptoms?: string[];
+  mood?: string[];
+  painLevel?: number; // 0-5
+  notes?: string;
+  isPeriodStart?: boolean;
+  isPeriodEnd?: boolean;
+  temperature?: number;
+}
+
+export interface CycleSettings {
+  cycleLength: number; // default: 28 days
+  periodLength: number; // default: 5 days
+  lutealLength: number; // default: 14 days
+  lastPeriodStart?: string; // YYYY-MM-DD
+  trackPartnerId?: string; // partner_b
+  partnerNotes?: string;
+}
+
+export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
+
+export interface DayCycleInfo {
+  phase: CyclePhase | 'normal';
+  isPeriod: boolean;
+  isPredictedPeriod: boolean;
+  isFertile: boolean;
+  isOvulation: boolean;
+  dayOfCycle?: number;
+  log?: CycleLog;
+}

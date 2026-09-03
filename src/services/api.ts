@@ -7,6 +7,8 @@ import {
   AuthUser,
   Bill,
   Budget,
+  CycleLog,
+  CycleSettings,
   MonthTrendData,
   RecurringExpense,
   HouseholdSummary,
@@ -186,4 +188,14 @@ export const api = {
   // Analytics Trends
   getThreeMonthTrends: (month?: string) =>
     fetchJSON<MonthTrendData[]>(`/analytics/three-months${month ? `?month=${month}` : ''}`),
+
+  // Cycle & Period Tracker
+  getCycleLogs: () => fetchJSON<CycleLog[]>('/cycle/logs'),
+  saveCycleLog: (log: CycleLog) =>
+    fetchJSON<CycleLog>('/cycle/logs', { method: 'POST', body: JSON.stringify(log) }),
+  deleteCycleLog: (date: string) =>
+    fetchJSON<{ success: boolean }>(`/cycle/logs/${date}`, { method: 'DELETE' }),
+  getCycleSettings: () => fetchJSON<CycleSettings>('/cycle/settings'),
+  updateCycleSettings: (settings: Partial<CycleSettings>) =>
+    fetchJSON<CycleSettings>('/cycle/settings', { method: 'POST', body: JSON.stringify(settings) }),
 };

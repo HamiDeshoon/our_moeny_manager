@@ -1,6 +1,6 @@
 import React from 'react';
-import { Sparkles, Mic, Camera, PlusCircle, Settings, Calendar, FileSpreadsheet, Download, UserCheck, LogIn } from 'lucide-react';
-import { AppSettings, AuthUser } from '../types';
+import { Sparkles, Mic, Camera, PlusCircle, Settings, Calendar, FileSpreadsheet, Download, UserCheck, LogIn, Heart } from 'lucide-react';
+import { APP_VERSION, AppSettings, AuthUser } from '../types';
 import { getJalaliMonthYear, getJalaliMonthOptions } from '../utils/formatters';
 
 interface HeaderProps {
@@ -15,8 +15,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   currentUser: AuthUser | null;
   onOpenLogin: () => void;
-  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools';
-  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools') => void;
+  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle';
+  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -50,8 +50,8 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
                   DuoSpend
-                  <span className="bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-indigo-500/30">
-                    v1.3.0-live
+                  <span className="bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
+                    v{APP_VERSION}
                   </span>
                 </span>
                 <span className="hidden md:inline-flex bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
@@ -243,6 +243,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Settings className="w-3.5 h-3.5" />
               <span>ابزارها و ورود اطلاعات</span>
+            </button>
+            <button
+              onClick={() => onTabChange('cycle')}
+              className={`px-3 sm:px-3.5 py-1.5 rounded-md font-medium whitespace-nowrap transition flex items-center space-x-1.5 rtl:space-x-reverse cursor-pointer ${
+                activeTab === 'cycle'
+                  ? 'bg-rose-500/15 text-rose-300 font-bold border border-rose-500/30'
+                  : 'text-zinc-400 hover:text-rose-400 hover:bg-white/5'
+              }`}
+            >
+              <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-500/20" />
+              <span>تقویم و چرخه قاعدگی</span>
             </button>
           </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Mic, Camera, RefreshCw } from 'lucide-react';
 import { api } from './services/api';
-import { AppSettings, AuthUser, Bill, Budget, HouseholdSummary, MIN_TRANSACTION_AMOUNT_TOMAN, Transaction } from './types';
+import { AppSettings, AuthUser, Bill, Budget, CycleLog, CycleSettings, HouseholdSummary, MIN_TRANSACTION_AMOUNT_TOMAN, Transaction } from './types';
 import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
 import { haptic } from './utils/haptics';
 import { usePullToRefresh } from './utils/usePullToRefresh';
@@ -19,6 +19,7 @@ const BudgetPlanner = lazy(() => import('./components/BudgetPlanner').then(m => 
 const BillTracker = lazy(() => import('./components/BillTracker').then(m => ({ default: m.BillTracker })));
 const AIAdvisor = lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const DataToolsPanel = lazy(() => import('./components/DataToolsPanel').then(m => ({ default: m.DataToolsPanel })));
+const CycleTracker = lazy(() => import('./components/CycleTracker').then(m => ({ default: m.CycleTracker })));
 
 // Lazy load Modals
 const TransactionForm = lazy(() => import('./components/TransactionForm').then(m => ({ default: m.TransactionForm })));
@@ -47,7 +48,7 @@ export default function App() {
     return `${startDate}..${endDate}`;
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle'>('dashboard');
 
   // Auth
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -61,6 +62,13 @@ export default function App() {
   const [summary, setSummary] = useState<HouseholdSummary | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
+  const [cycleLogs, setCycleLogs] = useState<CycleLog[]>([]);
+  const [cycleSettings, setCycleSettings] = useState<CycleSettings>({
+    cycleLength: 28,
+    periodLength: 5,
+    lutealLength: 14,
+    lastPeriodStart: '',
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -78,12 +86,14 @@ export default function App() {
       setLoadError(null);
 
       let targetMonth = selectedMonth;
-      const [fetchedSettings, fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills] = await Promise.all([
+      const [fetchedSettings, fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills, fetchedCycleLogs, fetchedCycleSettings] = await Promise.all([
         api.getSettings().catch(() => DEFAULT_SETTINGS),
         api.getTransactions(targetMonth).catch(() => []),
         api.getHouseholdSummary(targetMonth).catch(() => DEFAULT_SUMMARY),
         api.getBudgets().catch(() => []),
         api.getBills().catch(() => []),
+        api.getCycleLogs().catch(() => []),
+        api.getCycleSettings().catch(() => ({ cycleLength: 28, periodLength: 5, lutealLength: 14 })),
       ]);
 
       setSettings(fetchedSettings);
@@ -91,6 +101,8 @@ export default function App() {
       setSummary(fetchedSummary);
       setBudgets(fetchedBudgets);
       setBills(fetchedBills);
+      setCycleLogs(fetchedCycleLogs);
+      setCycleSettings(fetchedCycleSettings);
 
       if (fetchedSettings.useJalaliDate && !selectedMonth.includes('..')) {
         const d = new Date();
@@ -177,9 +189,26 @@ export default function App() {
     setSettings(updated);
   }, [currentUser]);
 
-  const handleTabChange = (tab: typeof activeTab) => {
+  const handleTabChange = (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle') => {
     haptic('light');
     setActiveTab(tab);
+  };
+
+  const handleSaveCycleLog = async (log: CycleLog) => {
+    await api.saveCycleLog(log);
+    const updated = await api.getCycleLogs().catch(() => []);
+    setCycleLogs(updated);
+  };
+
+  const handleDeleteCycleLog = async (date: string) => {
+    await api.deleteCycleLog(date);
+    const updated = await api.getCycleLogs().catch(() => []);
+    setCycleLogs(updated);
+  };
+
+  const handleUpdateCycleSettings = async (newSet: Partial<CycleSettings>) => {
+    const updated = await api.updateCycleSettings(newSet);
+    setCycleSettings(updated);
   };
 
   const activeSettings = settings || DEFAULT_SETTINGS;
@@ -306,6 +335,20 @@ export default function App() {
             {activeTab === 'tools' && (
               <motion.div key="tools" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
                 <DataToolsPanel onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }} onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }} onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
+              </motion.div>
+            )}
+
+            {activeTab === 'cycle' && (
+              <motion.div key="cycle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
+                <CycleTracker
+                  settings={activeSettings}
+                  currentUser={currentUser}
+                  cycleLogs={cycleLogs}
+                  cycleSettings={cycleSettings}
+                  onSaveLog={handleSaveCycleLog}
+                  onDeleteLog={handleDeleteCycleLog}
+                  onUpdateSettings={handleUpdateCycleSettings}
+                />
               </motion.div>
             )}
           </AnimatePresence>

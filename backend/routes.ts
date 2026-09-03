@@ -18,6 +18,8 @@ const publicReadPaths = new Set([
   '/bills',
   '/recurring-expenses',
   '/analytics/three-months',
+  '/cycle/logs',
+  '/cycle/settings',
   '/version',
 ]);
 
@@ -352,3 +354,44 @@ apiRouter.get('/analytics/three-months', async (req, res) => {
     res.json(await db.getThreeMonthTrends(month));
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
+
+// --- CYCLE & PERIOD TRACKER ---
+apiRouter.get('/cycle/logs', async (_req, res) => {
+  try {
+    const logs = await db.getCycleLogs();
+    res.json(logs);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.post('/cycle/logs', async (req, res) => {
+  try {
+    const log = req.body;
+    if (!log || !log.date) return res.status(400).json({ error: 'Date is required for cycle log' });
+    const saved = await db.saveCycleLog(log);
+    res.json(saved);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.delete('/cycle/logs/:date', async (req, res) => {
+  try {
+    const { date } = req.params;
+    const success = await db.deleteCycleLog(date);
+    res.json({ success });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.get('/cycle/settings', async (_req, res) => {
+  try {
+    const settings = await db.getCycleSettings();
+    res.json(settings);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.post('/cycle/settings', async (req, res) => {
+  try {
+    const newSettings = req.body;
+    const updated = await db.updateCycleSettings(newSettings);
+    res.json(updated);
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
