@@ -566,9 +566,28 @@ class LocalFileDB {
     }
   }
 
+  private saveTimer: NodeJS.Timeout | null = null;
+
+  private async saveAsync(): Promise<void> {
+    try {
+      await fs.promises.mkdir(DATA_DIR, { recursive: true });
+      const tempFile = `${DATA_FILE}.tmp.${Date.now()}`;
+      await fs.promises.writeFile(tempFile, JSON.stringify(this.store, null, 2), 'utf8');
+      await fs.promises.rename(tempFile, DATA_FILE);
+    } catch (err) {
+      try {
+        fs.writeFileSync(DATA_FILE, JSON.stringify(this.store, null, 2));
+      } catch (syncErr) {
+        console.error('[LocalFileDB] Failed to save store:', syncErr);
+      }
+    }
+  }
+
   private save(): void {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(this.store, null, 2));
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveAsync();
+    }, 40);
   }
 
   async getSettings(): Promise<AppSettings> {
@@ -601,7 +620,18 @@ class LocalFileDB {
 
   async batchAddTransactions(items: Omit<Transaction, 'id' | 'createdAt'>[]): Promise<Transaction[]> {
     const created: Transaction[] = [];
-    for (const item of items) created.push(await this.addTransaction(item));
+    const now = new Date().toISOString();
+    for (const item of items) {
+      const tx: Transaction = {
+        ...item,
+        id: genId('tx'),
+        type: item.type || 'EXPENSE',
+        createdAt: now,
+      } as Transaction;
+      created.push(tx);
+      this.store.transactions.push(tx);
+    }
+    this.save();
     return created;
   }
 

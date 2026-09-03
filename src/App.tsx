@@ -77,10 +77,21 @@ export default function App() {
       setIsLoading(true);
       setLoadError(null);
 
-      const fetchedSettings = await api.getSettings().catch(() => DEFAULT_SETTINGS);
-      setSettings(fetchedSettings);
-
       let targetMonth = selectedMonth;
+      const [fetchedSettings, fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills] = await Promise.all([
+        api.getSettings().catch(() => DEFAULT_SETTINGS),
+        api.getTransactions(targetMonth).catch(() => []),
+        api.getHouseholdSummary(targetMonth).catch(() => DEFAULT_SUMMARY),
+        api.getBudgets().catch(() => []),
+        api.getBills().catch(() => []),
+      ]);
+
+      setSettings(fetchedSettings);
+      setTransactions(fetchedTxs);
+      setSummary(fetchedSummary);
+      setBudgets(fetchedBudgets);
+      setBills(fetchedBills);
+
       if (fetchedSettings.useJalaliDate && !selectedMonth.includes('..')) {
         const d = new Date();
         const [jy, jm] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
@@ -88,18 +99,6 @@ export default function App() {
         targetMonth = `${startDate}..${endDate}`;
         setSelectedMonth(targetMonth);
       }
-
-      const [fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills] = await Promise.all([
-        api.getTransactions(targetMonth).catch(() => []),
-        api.getHouseholdSummary(targetMonth).catch(() => DEFAULT_SUMMARY),
-        api.getBudgets().catch(() => []),
-        api.getBills().catch(() => []),
-      ]);
-
-      setTransactions(fetchedTxs);
-      setSummary(fetchedSummary);
-      setBudgets(fetchedBudgets);
-      setBills(fetchedBills);
     } catch (err: any) {
       setLoadError(err.message || 'Failed to connect to backend server');
     } finally {

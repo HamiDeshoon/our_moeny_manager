@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Wallet } from 'lucide-react';
-import { AppSettings, HouseholdSummary } from '../types';
+import { APP_VERSION, AppSettings, HouseholdSummary } from '../types';
 import { formatMoney } from '../utils/formatters';
 
 interface SummaryCardsProps {
@@ -40,9 +40,9 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
                 کل هزینه‌های خانه
               </span>
               <div className="mt-1">
-                <span className="inline-flex items-center gap-1.5 bg-indigo-500/10 text-indigo-400 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border border-indigo-500/20">
-                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                  v1.3.0-live
+                <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  v{APP_VERSION}
                 </span>
               </div>
             </div>
