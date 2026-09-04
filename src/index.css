@@ -141,3 +141,57 @@ body {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
 }
+
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --duo-ink: #e7f2ed;
+  --duo-canvas: #0b1210;
+  --duo-panel: #14231e;
+  --duo-teal: #45d3ad;
+  --duo-period: #fb7185;
+  --duo-fertile: #7acb8a;
+  --duo-ovulation: #b391ee;
+  --duo-safe: #68756f;
+  color-scheme: dark;
+}
+
+html, body, #root { min-height: 100dvh; }
+body { background: var(--duo-canvas); overflow-x: clip; text-wrap: pretty; }
+button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--duo-teal);
+  outline-offset: 2px;
+}
+
+.app-mobile-shell {
+  min-height: 100dvh;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-left: var(--safe-left);
+  padding-bottom: calc(6rem + var(--safe-bottom));
+  overscroll-behavior-y: contain;
+}
+
+.bottom-tab-bar {
+  padding-bottom: calc(0.5rem + var(--safe-bottom));
+  padding-right: max(0.75rem, var(--safe-right));
+  padding-left: max(0.75rem, var(--safe-left));
+}
+
+.dashboard-carousel { scroll-snap-type: x mandatory; scrollbar-width: none; }
+.dashboard-carousel::-webkit-scrollbar { display: none; }
+.dashboard-slide { scroll-snap-align: center; scroll-snap-stop: always; }
+
+.modal-scroll-lock { overflow: hidden; }
+.cycle-period { background-color: color-mix(in srgb, var(--duo-period) 24%, transparent); border-color: color-mix(in srgb, var(--duo-period) 70%, transparent); }
+.cycle-fertile { background-color: color-mix(in srgb, var(--duo-fertile) 20%, transparent); border-color: color-mix(in srgb, var(--duo-fertile) 60%, transparent); }
+.cycle-ovulation { background-color: color-mix(in srgb, var(--duo-ovulation) 24%, transparent); border-color: color-mix(in srgb, var(--duo-ovulation) 70%, transparent); }
+.cycle-safe { background-color: color-mix(in srgb, var(--duo-safe) 18%, transparent); border-color: color-mix(in srgb, var(--duo-safe) 35%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  .shimmer { animation: none; background: rgba(255,255,255,0.08); }
+}

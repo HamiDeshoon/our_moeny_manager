@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { db } from './db.js';
-import { analyzeSpendingInsights, parseExcelOrSheetWithGemini, parseVoiceMemo, scanReceiptImage } from './geminiService.js';
+import { analyzeCycleSpendingPatterns, analyzeSpendingInsights, parseExcelOrSheetWithGemini, parseVoiceMemo, scanReceiptImage } from './geminiService.js';
 import { APP_VERSION, MIN_TRANSACTION_AMOUNT_TOMAN } from '../src/types.js';
+import { sendDueReminders } from './jobs/sendReminders.js';
+import { getCalendarPhase } from '../src/features/cycle/cycleMath.js';
 
 export const apiRouter = Router();
 
@@ -20,12 +22,13 @@ const publicReadPaths = new Set([
   '/analytics/three-months',
   '/cycle/logs',
   '/cycle/settings',
+  '/push/public-key',
   '/version',
 ]);
 
 const authMiddleware = (req: any, res: any, next: any) => {
   // Skip auth for login, health, and read-only dashboard data.
-  if (req.path === '/auth/login' || req.path === '/health' || (req.method === 'GET' && publicReadPaths.has(req.path))) {
+  if (req.path === '/auth/login' || req.path === '/health' || req.path === '/internal/run-reminders' || (req.method === 'GET' && publicReadPaths.has(req.path))) {
     return next();
   }
   const authUser = req.headers['x-auth-user'] as string;
@@ -324,6 +327,31 @@ apiRouter.get('/ai/insights', async (req, res) => {
   }
 });
 
+apiRouter.post('/ai/cycle-insights', async (req, res) => {
+  try {
+    const cycleSettings = await db.getCycleSettings();
+    if (!cycleSettings.healthInsightsConsent) return res.status(403).json({ error: 'Health insight consent is required.' });
+    const cycleDays = Array.isArray(req.body?.cycleDays) ? req.body.cycleDays.slice(-120) : [];
+    if (cycleDays.length < 7) return res.json({ insights: [] });
+    const transactions = (await db.getTransactions()).filter((transaction) => transaction.type === 'EXPENSE');
+    const expenseTotalsByPhase: Record<string, Record<string, number>> = { period: {}, fertile: {}, ovulation: {}, safe: {} };
+    for (const transaction of transactions) {
+      const phase = getCalendarPhase(transaction.date, cycleDays, cycleSettings);
+      expenseTotalsByPhase[phase][transaction.category] = (expenseTotalsByPhase[phase][transaction.category] || 0) + transaction.amount;
+    }
+    const settings = await db.getSettings();
+    const customKey = (req.headers['x-gemini-key'] as string) || settings.geminiApiKey;
+    const insights = await analyzeCycleSpendingPatterns({
+      cycleDays: cycleDays.map((day: any) => ({ date: day.date, flow: day.flow, symptoms: Array.isArray(day.symptoms) ? day.symptoms.slice(0, 4) : [], mood: Array.isArray(day.mood) ? day.mood.slice(0, 2) : [] })),
+      expenseTotalsByPhase,
+    }, customKey);
+    res.json({ insights });
+  } catch (err: any) {
+    console.error('Error generating cycle insights:', err);
+    res.status(500).json({ error: err.message || 'Failed to generate cycle insights' });
+  }
+});
+
 apiRouter.post('/ai/import-sheet', async (req, res) => {
   try {
     const { fileBase64, pastedText } = req.body;
@@ -395,3 +423,47 @@ apiRouter.post('/cycle/settings', async (req, res) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- PUSH REMINDERS ---
+apiRouter.get('/push/public-key', (_req, res) => {
+  const key = process.env.VAPID_PUBLIC_KEY;
+  if (!key) return res.status(503).json({ error: 'Push reminders are not configured on this deployment.' });
+  res.json({ publicKey: key });
+});
+
+apiRouter.get('/push/preferences', async (req: any, res) => {
+  try { res.json(await db.getNotificationPreferences(req.authUser)); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.put('/push/preferences', async (req: any, res) => {
+  try {
+    const input = req.body || {};
+    if (input.dailyLogTime && !/^\d{2}:\d{2}$/.test(input.dailyLogTime)) return res.status(400).json({ error: 'dailyLogTime must be HH:mm' });
+    if (input.timezone && typeof input.timezone !== 'string') return res.status(400).json({ error: 'timezone must be a string' });
+    res.json(await db.updateNotificationPreferences(req.authUser, input));
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.post('/push/subscriptions', async (req: any, res) => {
+  try {
+    const subscription = req.body;
+    if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) return res.status(400).json({ error: 'A valid push subscription is required.' });
+    await db.upsertPushSubscription(req.authUser, subscription);
+    res.status(201).json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.delete('/push/subscriptions', async (req: any, res) => {
+  try {
+    if (!req.body?.endpoint) return res.status(400).json({ error: 'Subscription endpoint is required.' });
+    await db.deletePushSubscription(req.authUser, req.body.endpoint);
+    res.json({ success: true });
+  } catch (err: any) { res.status(500).json({ error: err.message }); }
+});
+
+apiRouter.post('/internal/run-reminders', async (req, res) => {
+  const schedulerSecret = req.headers['x-reminder-job-secret'];
+  if (!process.env.REMINDER_JOB_SECRET || schedulerSecret !== process.env.REMINDER_JOB_SECRET) return res.status(401).json({ error: 'Scheduler authorization required.' });
+  try { res.json(await sendDueReminders()); }
+  catch (err: any) { res.status(500).json({ error: err.message }); }
+});

@@ -14,6 +14,8 @@ import {
   HouseholdSummary,
   IgnoredTransactionResponse,
   Transaction,
+  NotificationPreferences,
+  PushSubscriptionInput,
 } from '../types';
 
 const API_BASE = '/api';
@@ -198,4 +200,14 @@ export const api = {
   getCycleSettings: () => fetchJSON<CycleSettings>('/cycle/settings'),
   updateCycleSettings: (settings: Partial<CycleSettings>) =>
     fetchJSON<CycleSettings>('/cycle/settings', { method: 'POST', body: JSON.stringify(settings) }),
+
+  // Optional push reminders
+  getPushPublicKey: () => fetchJSON<{ publicKey: string }>('/push/public-key'),
+  getNotificationPreferences: () => fetchJSON<NotificationPreferences>('/push/preferences'),
+  updateNotificationPreferences: (preferences: Partial<NotificationPreferences>) =>
+    fetchJSON<NotificationPreferences>('/push/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
+  savePushSubscription: (subscription: PushSubscriptionInput) =>
+    fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription) }),
+  deletePushSubscription: (endpoint: string) =>
+    fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

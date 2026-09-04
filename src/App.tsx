@@ -1,402 +1,186 @@
-import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Mic, Camera, RefreshCw } from 'lucide-react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
+import { CircleAlert, LogIn, RefreshCw, Settings2, UserRound } from 'lucide-react';
 import { api } from './services/api';
-import { AppSettings, AuthUser, Bill, Budget, CycleLog, CycleSettings, HouseholdSummary, MIN_TRANSACTION_AMOUNT_TOMAN, Transaction } from './types';
-import { gregorianToJalali, getJalaliMonthGregorianRange, getJalaliMonthOptions } from './utils/formatters';
-import { haptic } from './utils/haptics';
-import { usePullToRefresh } from './utils/usePullToRefresh';
-
-import { Header } from './components/Header';
-import { SummaryCards } from './components/SummaryCards';
-import { SkeletonList, SkeletonCard } from './components/SkeletonLoader';
+import type { AppSettings, AuthUser, Bill, Budget, CycleInsight, CycleLog, CycleSettings, HouseholdSummary, Transaction } from './types';
+import { MIN_TRANSACTION_AMOUNT_TOMAN } from './types';
+import { getJalaliMonthGregorianRange, getJalaliMonthOptions, gregorianToJalali } from './utils/formatters';
 import { exportToCSV } from './utils/exporter';
+import { useHaptics } from './hooks/useHaptics';
+import { usePullToRefresh } from './hooks/usePullToRefresh';
+import { BottomTabBar } from './features/app-shell/BottomTabBar';
+import { ContextualFab } from './features/app-shell/ContextualFab';
+import type { ActiveModal, AppTab, HomeView } from './features/app-shell/appShell.types';
+import { HomeDashboard } from './features/home/HomeDashboard';
+import { CycleTrackerScreen } from './features/cycle/CycleTrackerScreen';
+import { CycleLogSheet } from './features/cycle/CycleLogSheet';
+import { getCycleInsights } from './features/insights/cycleInsightApi';
+import { Skeleton } from './components/ui/Skeleton';
 
-// Lazy load Tab Views
-const TransactionList = lazy(() => import('./components/TransactionList').then(m => ({ default: m.TransactionList })));
-const AnalyticsCharts = lazy(() => import('./components/AnalyticsCharts').then(m => ({ default: m.AnalyticsCharts })));
-const BudgetPlanner = lazy(() => import('./components/BudgetPlanner').then(m => ({ default: m.BudgetPlanner })));
-const BillTracker = lazy(() => import('./components/BillTracker').then(m => ({ default: m.BillTracker })));
-const AIAdvisor = lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
-const DataToolsPanel = lazy(() => import('./components/DataToolsPanel').then(m => ({ default: m.DataToolsPanel })));
-const CycleTracker = lazy(() => import('./components/CycleTracker').then(m => ({ default: m.CycleTracker })));
-
-// Lazy load Modals
-const TransactionForm = lazy(() => import('./components/TransactionForm').then(m => ({ default: m.TransactionForm })));
-const VoiceModal = lazy(() => import('./components/VoiceModal').then(m => ({ default: m.VoiceModal })));
-const ReceiptScannerModal = lazy(() => import('./components/ReceiptScannerModal').then(m => ({ default: m.ReceiptScannerModal })));
-const SettingsModal = lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
-const CSVImportModal = lazy(() => import('./components/CSVImportModal').then(m => ({ default: m.CSVImportModal })));
-const LoginModal = lazy(() => import('./components/LoginModal').then(m => ({ default: m.LoginModal })));
+const TransactionList = lazy(() => import('./components/TransactionList').then((module) => ({ default: module.TransactionList })));
+const AnalyticsCharts = lazy(() => import('./components/AnalyticsCharts').then((module) => ({ default: module.AnalyticsCharts })));
+const BudgetPlanner = lazy(() => import('./components/BudgetPlanner').then((module) => ({ default: module.BudgetPlanner })));
+const BillTracker = lazy(() => import('./components/BillTracker').then((module) => ({ default: module.BillTracker })));
+const AIAdvisor = lazy(() => import('./components/AIAdvisor').then((module) => ({ default: module.AIAdvisor })));
+const DataToolsPanel = lazy(() => import('./components/DataToolsPanel').then((module) => ({ default: module.DataToolsPanel })));
+const TransactionForm = lazy(() => import('./components/TransactionForm').then((module) => ({ default: module.TransactionForm })));
+const VoiceModal = lazy(() => import('./components/VoiceModal').then((module) => ({ default: module.VoiceModal })));
+const ReceiptScannerModal = lazy(() => import('./components/ReceiptScannerModal').then((module) => ({ default: module.ReceiptScannerModal })));
+const SettingsModal = lazy(() => import('./components/SettingsModal').then((module) => ({ default: module.SettingsModal })));
+const CSVImportModal = lazy(() => import('./components/CSVImportModal').then((module) => ({ default: module.CSVImportModal })));
+const LoginModal = lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
+const SummaryCards = lazy(() => import('./components/SummaryCards').then((module) => ({ default: module.SummaryCards })));
 
 const DEFAULT_SETTINGS: AppSettings = {
-  geminiApiKey: '',
-  currencySymbol: 'تومان',
+  geminiApiKey: '', currencySymbol: 'تومان', isRtl: true, useJalaliDate: true,
   partnerA: { id: 'partner_a', name: 'کاربر اول', avatar: '👨‍💼', color: '#0284c7' },
   partnerB: { id: 'partner_b', name: 'کاربر دوم', avatar: '👩‍⚕️', color: '#16a34a' },
-  isRtl: true,
-  useJalaliDate: true,
 };
-
 const DEFAULT_SUMMARY: HouseholdSummary = { partnerATotalPaid: 0, partnerBTotalPaid: 0 };
+const DEFAULT_CYCLE_SETTINGS: CycleSettings = { cycleLength: 28, periodLength: 5, lutealLength: 14, lastPeriodStart: '', healthInsightsConsent: false };
+const screenMotion = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 }, transition: { duration: 0.18 } };
+
+function getDefaultMonth(): string {
+  const now = new Date();
+  const [year, month] = gregorianToJalali(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  const range = getJalaliMonthGregorianRange(year, month);
+  return `${range.startDate}..${range.endDate}`;
+}
 
 export default function App() {
-  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
-    const d = new Date();
-    const [jy, jm] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-    const { startDate, endDate } = getJalaliMonthGregorianRange(jy, jm);
-    return `${startDate}..${endDate}`;
-  });
-
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle'>('dashboard');
-
-  // Auth
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
-    try { return JSON.parse(localStorage.getItem('duospend_auth_user') || 'null'); } catch { return null; }
-  });
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-
-  // Data
+  const [selectedMonth, setSelectedMonth] = useState(getDefaultMonth);
+  const [activeTab, setActiveTab] = useState<AppTab>(() => location.pathname.startsWith('/cycle') ? 'cycle' : 'home');
+  const [homeView, setHomeView] = useState<HomeView>('dashboard');
+  const [activeModal, setActiveModal] = useState<ActiveModal>({ kind: 'none' });
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => { try { return JSON.parse(localStorage.getItem('duospend_auth_user') || 'null'); } catch { return null; } });
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
   const [summary, setSummary] = useState<HouseholdSummary | null>(null);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [cycleLogs, setCycleLogs] = useState<CycleLog[]>([]);
-  const [cycleSettings, setCycleSettings] = useState<CycleSettings>({
-    cycleLength: 28,
-    periodLength: 5,
-    lutealLength: 14,
-    lastPeriodStart: '',
-  });
+  const [cycleSettings, setCycleSettings] = useState<CycleSettings>(DEFAULT_CYCLE_SETTINGS);
+  const [cycleInsights, setCycleInsights] = useState<CycleInsight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
+  const focusBeforeModal = useRef<HTMLElement | null>(null);
+  const haptics = useHaptics();
 
-  // Modals
-  const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isCSVImportOpen, setIsCSVImportOpen] = useState(false);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    setIsLoading(true); setLoadError(null);
     try {
-      setIsLoading(true);
-      setLoadError(null);
-
-      let targetMonth = selectedMonth;
-      const [fetchedSettings, fetchedTxs, fetchedSummary, fetchedBudgets, fetchedBills, fetchedCycleLogs, fetchedCycleSettings] = await Promise.all([
-        api.getSettings().catch(() => DEFAULT_SETTINGS),
-        api.getTransactions(targetMonth).catch(() => []),
-        api.getHouseholdSummary(targetMonth).catch(() => DEFAULT_SUMMARY),
-        api.getBudgets().catch(() => []),
-        api.getBills().catch(() => []),
-        api.getCycleLogs().catch(() => []),
-        api.getCycleSettings().catch(() => ({ cycleLength: 28, periodLength: 5, lutealLength: 14 })),
+      const [fetchedSettings, fetchedTransactions, fetchedSummary, fetchedBudgets, fetchedBills, fetchedLogs, fetchedCycleSettings] = await Promise.all([
+        api.getSettings().catch(() => DEFAULT_SETTINGS), api.getTransactions(selectedMonth).catch(() => []), api.getHouseholdSummary(selectedMonth).catch(() => DEFAULT_SUMMARY),
+        api.getBudgets().catch(() => []), api.getBills().catch(() => []), api.getCycleLogs().catch(() => []), api.getCycleSettings().catch(() => DEFAULT_CYCLE_SETTINGS),
       ]);
+      setSettings(fetchedSettings); setTransactions(fetchedTransactions); setSummary(fetchedSummary); setBudgets(fetchedBudgets); setBills(fetchedBills); setCycleLogs(fetchedLogs); setCycleSettings(fetchedCycleSettings);
+    } catch (error) { setLoadError(error instanceof Error ? error.message : 'ارتباط با سرور برقرار نشد.'); }
+    finally { setIsLoading(false); }
+  }, [selectedMonth]);
 
-      setSettings(fetchedSettings);
-      setTransactions(fetchedTxs);
-      setSummary(fetchedSummary);
-      setBudgets(fetchedBudgets);
-      setBills(fetchedBills);
-      setCycleLogs(fetchedCycleLogs);
-      setCycleSettings(fetchedCycleSettings);
+  useEffect(() => { void loadData(); }, [loadData]);
+  useEffect(() => {
+    if (activeModal.kind === 'none') { document.body.classList.remove('modal-scroll-lock'); focusBeforeModal.current?.focus(); return; }
+    focusBeforeModal.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    document.body.classList.add('modal-scroll-lock');
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') setActiveModal({ kind: 'none' }); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => { document.body.classList.remove('modal-scroll-lock'); window.removeEventListener('keydown', closeOnEscape); };
+  }, [activeModal.kind]);
 
-      if (fetchedSettings.useJalaliDate && !selectedMonth.includes('..')) {
-        const d = new Date();
-        const [jy, jm] = gregorianToJalali(d.getFullYear(), d.getMonth() + 1, d.getDate());
-        const { startDate, endDate } = getJalaliMonthGregorianRange(jy, jm);
-        targetMonth = `${startDate}..${endDate}`;
-        setSelectedMonth(targetMonth);
-      }
-    } catch (err: any) {
-      setLoadError(err.message || 'Failed to connect to backend server');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const refreshCycleInsights = useCallback(async (logs = cycleLogs) => {
+    if (!currentUser || !cycleSettings.healthInsightsConsent) return;
+    setInsightsLoading(true); setInsightsError(null);
+    try { setCycleInsights(await getCycleInsights(logs)); }
+    catch (error) { setInsightsError(error instanceof Error ? error.message : 'بینش هوشمند در دسترس نیست.'); }
+    finally { setInsightsLoading(false); }
+  }, [currentUser, cycleLogs, cycleSettings.healthInsightsConsent]);
 
-  // Pull to refresh
-  const { pullDistance, isRefreshing, canRefresh } = usePullToRefresh(async () => {
-    haptic('medium');
-    await loadData();
-    haptic('success');
-  });
+  useEffect(() => { if (cycleSettings.healthInsightsConsent) void refreshCycleInsights(); else setCycleInsights([]); }, [cycleSettings.healthInsightsConsent, refreshCycleInsights]);
 
-  useEffect(() => { loadData(); }, [selectedMonth]);
-
-  // Handlers with haptic feedback
-  const handleSaveTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    if (Number(txData.amount || 0) > 0 && Number(txData.amount) < MIN_TRANSACTION_AMOUNT_TOMAN) {
-      haptic('warning');
-      return;
-    }
-    haptic('success');
-    if (editingTransaction) {
-      const updated = await api.updateTransaction(editingTransaction.id, txData);
-      setEditingTransaction(null);
-      setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
-    } else {
-      const created = await api.addTransaction(txData);
-      if (created) setTransactions(prev => [created, ...prev]);
-    }
-    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
-  }, [currentUser, editingTransaction, selectedMonth]);
-
-  const handleDeleteTransaction = useCallback(async (id: string) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('warning');
-    await api.deleteTransaction(id);
-    setTransactions(prev => prev.filter(t => t.id !== id));
-    api.getHouseholdSummary(selectedMonth).then(s => setSummary(s)).catch(() => {});
-  }, [currentUser, selectedMonth]);
-
-  const handleUpdateBudgets = useCallback(async (newBudgets: Budget[]) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('light');
-    const updated = await api.updateBudgets(newBudgets);
-    setBudgets(updated);
-  }, [currentUser]);
-
-  const handleToggleBillPaid = useCallback(async (id: string, isPaid: boolean) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('light');
-    const updated = await api.toggleBillPaid(id, isPaid);
-    setBills(prev => prev.map(b => b.id === id ? updated : b));
-  }, [currentUser]);
-
-  const handleAddBill = useCallback(async (billData: Omit<Bill, 'id'>) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('success');
-    const created = await api.addBill(billData);
-    setBills(prev => [...prev, created]);
-  }, [currentUser]);
-
-  const handleDeleteBill = useCallback(async (id: string) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('warning');
-    await api.deleteBill(id);
-    setBills(prev => prev.filter(b => b.id !== id));
-  }, [currentUser]);
-
-  const handleUpdateSettings = useCallback(async (newSettings: Partial<AppSettings>) => {
-    if (!currentUser) { setIsLoginModalOpen(true); return; }
-    haptic('light');
-    const updated = await api.updateSettings(newSettings);
-    setSettings(updated);
-  }, [currentUser]);
-
-  const handleTabChange = (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle') => {
-    haptic('light');
-    setActiveTab(tab);
-  };
-
-  const handleSaveCycleLog = async (log: CycleLog) => {
-    await api.saveCycleLog(log);
-    const updated = await api.getCycleLogs().catch(() => []);
-    setCycleLogs(updated);
-  };
-
-  const handleDeleteCycleLog = async (date: string) => {
-    await api.deleteCycleLog(date);
-    const updated = await api.getCycleLogs().catch(() => []);
-    setCycleLogs(updated);
-  };
-
-  const handleUpdateCycleSettings = async (newSet: Partial<CycleSettings>) => {
-    const updated = await api.updateCycleSettings(newSet);
-    setCycleSettings(updated);
-  };
-
+  const pull = usePullToRefresh({ enabled: activeTab === 'home', onRefresh: async () => { haptics.tab(); await loadData(); haptics.success(); } });
   const activeSettings = settings || DEFAULT_SETTINGS;
   const activeSummary = summary || DEFAULT_SUMMARY;
+  const closeModal = useCallback(() => setActiveModal({ kind: 'none' }), []);
+  const openModal = useCallback((modal: Exclude<ActiveModal, { kind: 'none' }>) => setActiveModal(modal), []);
+  const requireAuth = (modal: Exclude<ActiveModal, { kind: 'none' }>) => currentUser ? openModal(modal) : openModal({ kind: 'login' });
 
-  if (isLoading && !settings) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 mt-16 safe-area-top">
-        <div className="flex gap-4">
-          <div className="flex-1"><div className="shimmer h-32 rounded-2xl" /></div>
-          <div className="flex-1 hidden sm:block"><div className="shimmer h-32 rounded-2xl" /></div>
-        </div>
-        <div className="space-y-3">
-          {[1,2,3,4,5].map(i => <div key={i} className="shimmer h-16 rounded-xl" />)}
-        </div>
-      </div>
-    );
-  }
+  const updateSummary = useCallback(() => { void api.getHouseholdSummary(selectedMonth).then(setSummary).catch(() => undefined); }, [selectedMonth]);
+  const markPending = (id: string, pending: boolean) => setPendingIds((current) => { const next = new Set(current); pending ? next.add(id) : next.delete(id); return next; });
 
-  if (loadError && !settings) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center safe-area-top">
-        <div className="p-6 bg-zinc-900 border border-white/10 rounded-3xl max-w-md space-y-4 shadow-xl">
-          <h2 className="text-lg font-extrabold text-rose-500">خطا در اتصال به سرور</h2>
-          <p className="text-xs text-zinc-400">{loadError}</p>
-          <button onClick={() => loadData()} className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer tap-scale">
-            تلاش مجدد (Retry Connection)
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const handleSaveTransaction = useCallback(async (data: Omit<Transaction, 'id' | 'createdAt'>) => {
+    if (!currentUser) { openModal({ kind: 'login' }); return; }
+    if (data.amount > 0 && data.amount < MIN_TRANSACTION_AMOUNT_TOMAN) throw new Error(`حداقل مبلغ قابل ثبت ${MIN_TRANSACTION_AMOUNT_TOMAN.toLocaleString('fa-IR')} تومان است.`);
+    setMutationError(null);
+    const editingId = activeModal.kind === 'transaction-edit' ? activeModal.transactionId : null;
+    if (editingId) {
+      const original = transactions.find((transaction) => transaction.id === editingId);
+      if (!original) throw new Error('تراکنش موردنظر پیدا نشد.');
+      const optimistic = { ...original, ...data };
+      setTransactions((current) => current.map((transaction) => transaction.id === editingId ? optimistic : transaction)); markPending(editingId, true);
+      try { const saved = await api.updateTransaction(editingId, data); setTransactions((current) => current.map((transaction) => transaction.id === editingId ? saved : transaction)); haptics.success(); updateSummary(); }
+      catch (error) { setTransactions((current) => current.map((transaction) => transaction.id === editingId ? original : transaction)); haptics.error(); const message = error instanceof Error ? error.message : 'ویرایش تراکنش ناموفق بود.'; setMutationError(message); throw error; }
+      finally { markPending(editingId, false); }
+      return;
+    }
+    const tempId = `optimistic-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimistic: Transaction = { ...data, id: tempId, createdAt: new Date().toISOString() } as Transaction;
+    setTransactions((current) => [optimistic, ...current]); markPending(tempId, true);
+    try { const saved = await api.addTransaction(data); if (!saved) throw new Error('این مبلغ طبق تنظیمات برنامه ثبت نشد.'); setTransactions((current) => current.map((transaction) => transaction.id === tempId ? saved : transaction)); haptics.success(); updateSummary(); }
+    catch (error) { setTransactions((current) => current.filter((transaction) => transaction.id !== tempId)); haptics.error(); const message = error instanceof Error ? error.message : 'ثبت تراکنش ناموفق بود.'; setMutationError(message); throw error; }
+    finally { markPending(tempId, false); }
+  }, [activeModal, currentUser, haptics, openModal, transactions, updateSummary]);
 
-  const isAuthed = Boolean(currentUser);
+  const deleteTransaction = useCallback(async (id: string) => {
+    if (!currentUser) { openModal({ kind: 'login' }); return; }
+    const original = transactions.find((transaction) => transaction.id === id); if (!original) return;
+    setMutationError(null); setTransactions((current) => current.filter((transaction) => transaction.id !== id)); markPending(id, true);
+    try { await api.deleteTransaction(id); haptics.success(); updateSummary(); closeModal(); }
+    catch (error) { setTransactions((current) => [original, ...current].sort((a, b) => b.date.localeCompare(a.date))); haptics.error(); setMutationError(error instanceof Error ? error.message : 'حذف تراکنش ناموفق بود.'); }
+    finally { markPending(id, false); }
+  }, [closeModal, currentUser, haptics, openModal, transactions, updateSummary]);
 
-  return (
-    <div
-      dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen w-full overflow-x-hidden selection:bg-indigo-500/30 selection:text-indigo-200"
-    >
-      {/* Pull-to-refresh indicator */}
-      {pullDistance > 0 && (
-        <div className="ptr-indicator" style={{ opacity: Math.min(pullDistance / 70, 1) }}>
-          <RefreshCw className={`w-6 h-6 text-indigo-400 ${isRefreshing ? 'animate-spin' : ''}`}
-            style={{ transform: `rotate(${pullDistance * 3}deg)` }} />
-        </div>
-      )}
+  const saveCycleLog = useCallback(async (log: CycleLog) => {
+    if (!currentUser) { openModal({ kind: 'login' }); return; }
+    const before = cycleLogs; const next = [...cycleLogs.filter((entry) => entry.date !== log.date), log].sort((a, b) => b.date.localeCompare(a.date));
+    setCycleLogs(next);
+    try { await api.saveCycleLog(log); if (log.flow && log.flow !== 'none' && !cycleSettings.lastPeriodStart) { const update = await api.updateCycleSettings({ lastPeriodStart: log.date }); setCycleSettings(update); } haptics.success(); if (cycleSettings.healthInsightsConsent) void refreshCycleInsights(next); }
+    catch (error) { setCycleLogs(before); haptics.error(); throw error; }
+  }, [currentUser, cycleLogs, cycleSettings.healthInsightsConsent, cycleSettings.lastPeriodStart, haptics, openModal, refreshCycleInsights]);
 
-      <Header
-        settings={activeSettings}
-        selectedMonth={selectedMonth}
-        onMonthChange={setSelectedMonth}
-        onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
-        onOpenVoiceModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsVoiceModalOpen(true); }}
-        onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }}
-        onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }}
-        onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)}
-        onOpenSettings={() => setIsSettingsModalOpen(true)}
-        currentUser={currentUser}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+  const updateCycleSettings = useCallback(async (update: Partial<CycleSettings>) => { const saved = await api.updateCycleSettings(update); setCycleSettings(saved); }, []);
+  const enableCycleInsights = async () => { if (!currentUser) { openModal({ kind: 'login' }); return; } const saved = await api.updateCycleSettings({ healthInsightsConsent: true }); setCycleSettings(saved); };
+  const updateBudgets = async (next: Budget[]) => { if (!currentUser) { openModal({ kind: 'login' }); return; } setBudgets(await api.updateBudgets(next)); };
+  const addBill = async (bill: Omit<Bill, 'id'>) => { if (!currentUser) { openModal({ kind: 'login' }); return; } const saved = await api.addBill(bill); setBills((current) => [...current, saved]); };
+  const toggleBill = async (id: string, isPaid: boolean) => { if (!currentUser) { openModal({ kind: 'login' }); return; } const saved = await api.toggleBillPaid(id, isPaid); if (saved) setBills((current) => current.map((bill) => bill.id === id ? saved : bill)); };
+  const deleteBill = async (id: string) => { if (!currentUser) { openModal({ kind: 'login' }); return; } await api.deleteBill(id); setBills((current) => current.filter((bill) => bill.id !== id)); };
+  const updateSettings = async (update: Partial<AppSettings>) => { if (!currentUser) { openModal({ kind: 'login' }); return; } setSettings(await api.updateSettings(update)); };
 
-      {!isAuthed && (
-        <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-center shadow-lg shadow-amber-950/10">
-            <p className="text-sm text-amber-100 font-medium">
-              ⚠️ شما وارد نشده‌اید. برای افزودن، حذف یا تغییر اطلاعات، ابتدا وارد شوید.
-              <button onClick={() => setIsLoginModalOpen(true)} className="mr-2 rounded-lg bg-amber-300/15 px-3 py-1 font-bold text-amber-200 hover:bg-amber-300/25 transition">ورود</button>
-            </p>
-          </div>
-        </div>
-      )}
+  const switchTab = (tab: AppTab) => { haptics.tab(); setActiveTab(tab); if (tab !== 'home') setHomeView('dashboard'); history.replaceState(null, '', tab === 'cycle' ? '/cycle' : '/'); };
+  const editingTransaction = activeModal.kind === 'transaction-edit' ? transactions.find((transaction) => transaction.id === activeModal.transactionId) || null : null;
+  const selectedCycleLog = activeModal.kind === 'cycle-log' ? cycleLogs.find((log) => log.date === activeModal.date) : undefined;
+  const deletingTransaction = activeModal.kind === 'transaction-delete' ? transactions.find((transaction) => transaction.id === activeModal.transactionId) : null;
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <SummaryCards summary={activeSummary} settings={activeSettings} />
+  if (isLoading && !settings) return <div className="app-mobile-shell mx-auto max-w-md space-y-4 px-4 pt-8"><Skeleton className="h-24" /><Skeleton className="h-44" /><Skeleton className="h-32" /></div>;
+  if (loadError && !settings) return <div className="app-mobile-shell grid place-items-center px-6 text-center"><section className="max-w-sm rounded-3xl border border-rose-300/20 bg-rose-400/10 p-6"><CircleAlert className="mx-auto h-7 w-7 text-rose-200" /><h1 className="mt-3 font-bold text-white">اتصال برقرار نشد</h1><p className="mt-2 text-sm text-zinc-300">{loadError}</p><button type="button" onClick={() => void loadData()} className="mt-5 min-h-11 rounded-xl bg-rose-300 px-4 text-sm font-bold text-[#310913]">تلاش دوباره</button></section></div>;
 
-        <Suspense fallback={<div className="mt-8 space-y-3">{[1,2,3].map(i => <div key={i} className="shimmer h-16 rounded-xl" />)}</div>}>
-          <AnimatePresence mode="wait">
-            {activeTab === 'dashboard' && (
-              <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }} className="space-y-6">
-                <AnalyticsCharts transactions={transactions} budgets={budgets} settings={activeSettings} selectedMonth={selectedMonth} />
-                <TransactionList
-                  transactions={transactions}
-                  settings={activeSettings}
-                  onEditTransaction={(tx) => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
-                  onDeleteTransaction={handleDeleteTransaction}
-                  onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
-                />
-              </motion.div>
-            )}
+  const homeScreen = homeView === 'transactions'
+    ? <TransactionList transactions={transactions} settings={activeSettings} pendingIds={pendingIds} onEditTransaction={(transaction) => requireAuth({ kind: 'transaction-edit', transactionId: transaction.id })} onDeleteTransaction={(id) => requireAuth({ kind: 'transaction-delete', transactionId: id })} onOpenAddExpense={() => requireAuth({ kind: 'transaction-create', source: 'manual' })} onBack={() => setHomeView('dashboard')} />
+    : <HomeDashboard onViewTransactions={() => setHomeView('transactions')} balances={<SummaryCards summary={activeSummary} settings={activeSettings} />} budget={<BudgetPlanner budgets={budgets} transactions={transactions} settings={activeSettings} onUpdateBudgets={updateBudgets} onRefreshTransactions={loadData} />} insights={<AIAdvisor selectedMonth={selectedMonth} settings={activeSettings} />} />;
 
-            {activeTab === 'transactions' && (
-              <motion.div key="transactions" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <TransactionList
-                  transactions={transactions}
-                  settings={activeSettings}
-                  onEditTransaction={(tx) => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(tx); setIsAddExpenseOpen(true); }}
-                  onDeleteTransaction={handleDeleteTransaction}
-                  onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }}
-                />
-              </motion.div>
-            )}
-
-            {activeTab === 'budgets' && (
-              <motion.div key="budgets" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <BudgetPlanner budgets={budgets} transactions={transactions} settings={activeSettings} onUpdateBudgets={handleUpdateBudgets} onRefreshTransactions={loadData} />
-              </motion.div>
-            )}
-
-            {activeTab === 'bills' && (
-              <motion.div key="bills" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <BillTracker bills={bills} settings={activeSettings} onToggleBillPaid={handleToggleBillPaid} onAddBill={handleAddBill} onDeleteBill={handleDeleteBill} />
-              </motion.div>
-            )}
-
-            {activeTab === 'insights' && (
-              <motion.div key="insights" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <AIAdvisor selectedMonth={selectedMonth} settings={activeSettings} />
-              </motion.div>
-            )}
-
-            {activeTab === 'tools' && (
-              <motion.div key="tools" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <DataToolsPanel onOpenAddExpense={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setEditingTransaction(null); setIsAddExpenseOpen(true); }} onOpenCSVImport={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsCSVImportOpen(true); }} onOpenReceiptModal={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } setIsReceiptModalOpen(true); }} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} />
-              </motion.div>
-            )}
-
-            {activeTab === 'cycle' && (
-              <motion.div key="cycle" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
-                <CycleTracker
-                  settings={activeSettings}
-                  currentUser={currentUser}
-                  cycleLogs={cycleLogs}
-                  cycleSettings={cycleSettings}
-                  onSaveLog={handleSaveCycleLog}
-                  onDeleteLog={handleDeleteCycleLog}
-                  onUpdateSettings={handleUpdateCycleSettings}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Suspense>
-      </main>
-
-      {/* Mobile Floating Action Buttons */}
-      <div className="fixed bottom-0 inset-x-0 z-40 sm:hidden safe-area-bottom pointer-events-none">
-        <div className="flex items-center justify-center gap-3 pb-3">
-          <button
-            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('light'); setIsVoiceModalOpen(true); }}
-            className="pointer-events-auto w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center tap-scale active:scale-90 transition"
-            aria-label="Voice"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('medium'); setEditingTransaction(null); setIsAddExpenseOpen(true); }}
-            className="pointer-events-auto w-16 h-16 rounded-full bg-emerald-600 text-white shadow-xl flex items-center justify-center tap-scale active:scale-90 transition border-2 border-emerald-400/30"
-            aria-label="Add expense"
-          >
-            <Plus className="w-7 h-7" />
-          </button>
-          <button
-            onClick={() => { if (!currentUser) { setIsLoginModalOpen(true); return; } haptic('light'); setIsReceiptModalOpen(true); }}
-            className="pointer-events-auto w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg flex items-center justify-center tap-scale active:scale-90 transition"
-            aria-label="Scan receipt"
-          >
-            <Camera className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Modals */}
-      <Suspense fallback={null}>
-        <TransactionForm
-          isOpen={isAddExpenseOpen}
-          onClose={() => { setIsAddExpenseOpen(false); setEditingTransaction(null); }}
-          onSave={handleSaveTransaction}
-          initialData={editingTransaction || (currentUser ? ({ paidBy: currentUser.partnerId } as Partial<Transaction>) : null)}
-          settings={activeSettings}
-        />
-        <VoiceModal isOpen={isVoiceModalOpen} onClose={() => setIsVoiceModalOpen(false)} onSaveTransaction={handleSaveTransaction} onRefreshData={loadData} settings={activeSettings} />
-        <ReceiptScannerModal isOpen={isReceiptModalOpen} onClose={() => setIsReceiptModalOpen(false)} onSaveTransaction={handleSaveTransaction} settings={activeSettings} />
-        <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} settings={activeSettings} onUpdateSettings={handleUpdateSettings} />
-        <CSVImportModal isOpen={isCSVImportOpen} onClose={() => setIsCSVImportOpen(false)} settings={activeSettings} onImportComplete={loadData} />
-        <LoginModal isOpen={isLoginModalOpen} onClose={() => setIsLoginModalOpen(false)} currentUser={currentUser} onLoginSuccess={(user) => { setCurrentUser(user); loadData(); }} />
-      </Suspense>
-    </div>
-  );
+  return <div dir={activeSettings.isRtl ? 'rtl' : 'ltr'} className="app-mobile-shell mx-auto max-w-md overflow-x-hidden bg-[#0b1210] text-zinc-100">
+    <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/5 bg-[#0b1210]/92 px-4 py-3 backdrop-blur-xl"><div><p className="text-[11px] font-bold tracking-wide text-teal-300">DUOSPEND</p><h1 className="text-sm font-bold text-white">مدیریت مشترک خانه</h1></div><div className="flex items-center gap-2">{activeSettings.useJalaliDate ? <select aria-label="انتخاب ماه" value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)} className="max-w-32 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-zinc-200">{getJalaliMonthOptions().map((option) => <option key={option.key} value={`${option.startDate}..${option.endDate}`}>{option.label}</option>)}</select> : null}<button type="button" onClick={() => openModal(currentUser ? { kind: 'settings' } : { kind: 'login' })} aria-label="تنظیمات و حساب" className="grid h-10 w-10 place-items-center rounded-xl bg-white/5 text-zinc-200">{currentUser ? <span className="text-base">{currentUser.avatar}</span> : <UserRound className="h-4 w-4" />}</button></div></header>
+    {mutationError ? <div role="alert" className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-xl border border-rose-400/25 bg-rose-400/10 px-3 py-2 text-xs text-rose-100"><span>{mutationError}</span><button type="button" onClick={() => setMutationError(null)} className="font-bold">بستن</button></div> : null}
+    {pull.pullDistance > 0 ? <div className="ptr-indicator"><RefreshCw className={`h-5 w-5 text-teal-300 ${pull.isRefreshing ? 'animate-spin' : ''}`} /></div> : null}
+    <main {...pull.bind} className="px-4 py-5"><Suspense fallback={<div className="space-y-4"><Skeleton className="h-32" /><Skeleton className="h-56" /></div>}><AnimatePresence mode="wait"><motion.div key={`${activeTab}-${homeView}`} {...screenMotion}>{activeTab === 'home' ? homeScreen : null}{activeTab === 'analytics' ? <AnalyticsCharts transactions={transactions} budgets={budgets} settings={activeSettings} selectedMonth={selectedMonth} /> : null}{activeTab === 'cycle' ? <CycleTrackerScreen settings={activeSettings} currentUser={currentUser} logs={cycleLogs} cycleSettings={cycleSettings} insights={cycleInsights} insightsLoading={insightsLoading} insightsError={insightsError} onOpenLog={(date) => requireAuth({ kind: 'cycle-log', date })} onUpdateSettings={updateCycleSettings} onEnableInsights={() => void enableCycleInsights()} onRefreshInsights={() => void refreshCycleInsights()} /> : null}{activeTab === 'profile' ? <div className="space-y-5"><section className="rounded-[1.5rem] border border-white/10 bg-[#14231e] p-5"><p className="text-xs text-zinc-500">حساب کاربری</p><div className="mt-2 flex items-center justify-between"><h2 className="font-bold text-white">{currentUser ? currentUser.name : 'مهمان'}</h2><button type="button" onClick={() => openModal(currentUser ? { kind: 'settings' } : { kind: 'login' })} className="min-h-10 rounded-lg bg-white/5 px-3 text-xs font-bold text-zinc-200">{currentUser ? 'تنظیمات' : 'ورود'}</button></div></section><BillTracker bills={bills} settings={activeSettings} onToggleBillPaid={toggleBill} onAddBill={addBill} onDeleteBill={deleteBill} /><DataToolsPanel onOpenAddExpense={() => requireAuth({ kind: 'transaction-create', source: 'manual' })} onOpenCSVImport={() => requireAuth({ kind: 'csv-import' })} onOpenReceiptModal={() => requireAuth({ kind: 'transaction-create', source: 'receipt' })} onExportCSV={() => exportToCSV(transactions, activeSettings, selectedMonth)} settings={activeSettings} /></div> : null}</motion.div></AnimatePresence></Suspense></main>
+    <ContextualFab onManual={() => requireAuth({ kind: 'transaction-create', source: 'manual' })} onReceipt={() => requireAuth({ kind: 'transaction-create', source: 'receipt' })} onVoice={() => requireAuth({ kind: 'transaction-create', source: 'voice' })} />
+    <BottomTabBar activeTab={activeTab} onChange={switchTab} />
+    <Suspense fallback={null}><TransactionForm isOpen={activeModal.kind === 'transaction-create' && activeModal.source === 'manual' || activeModal.kind === 'transaction-edit'} onClose={closeModal} onSave={handleSaveTransaction} initialData={editingTransaction || (currentUser ? { paidBy: currentUser.partnerId } : null)} settings={activeSettings} /><VoiceModal isOpen={activeModal.kind === 'transaction-create' && activeModal.source === 'voice'} onClose={closeModal} onSaveTransaction={handleSaveTransaction} onRefreshData={loadData} settings={activeSettings} /><ReceiptScannerModal isOpen={activeModal.kind === 'transaction-create' && activeModal.source === 'receipt'} onClose={closeModal} onSaveTransaction={handleSaveTransaction} settings={activeSettings} /><SettingsModal isOpen={activeModal.kind === 'settings'} onClose={closeModal} settings={activeSettings} onUpdateSettings={updateSettings} /><CSVImportModal isOpen={activeModal.kind === 'csv-import'} onClose={closeModal} settings={activeSettings} onImportComplete={loadData} /><LoginModal isOpen={activeModal.kind === 'login'} onClose={closeModal} currentUser={currentUser} onLoginSuccess={(user) => { setCurrentUser(user); closeModal(); void loadData(); }} /></Suspense>
+    <CycleLogSheet date={activeModal.kind === 'cycle-log' ? activeModal.date : null} existing={selectedCycleLog} onClose={closeModal} onSave={saveCycleLog} />
+    {deletingTransaction ? <div className="fixed inset-0 z-[70] grid place-items-center bg-black/70 p-5"><section role="dialog" aria-modal="true" aria-label="تأیید حذف تراکنش" className="w-full rounded-3xl border border-white/15 bg-[#14231e] p-5"><h2 className="font-bold text-white">حذف تراکنش؟</h2><p className="mt-2 text-sm text-zinc-400">{deletingTransaction.title} از فهرست حذف می‌شود.</p><div className="mt-5 grid grid-cols-2 gap-2"><button type="button" onClick={closeModal} className="min-h-11 rounded-xl bg-white/5 text-sm font-bold text-zinc-200">انصراف</button><button type="button" onClick={() => void deleteTransaction(deletingTransaction.id)} className="min-h-11 rounded-xl bg-rose-400 text-sm font-bold text-[#310913]">حذف</button></div></section></div> : null}
+  </div>;
 }

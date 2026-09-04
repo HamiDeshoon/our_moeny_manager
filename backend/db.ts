@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Pool } from 'pg';
-import { AppSettings, Bill, Budget, CycleLog, CycleSettings, MonthTrendData, RecurringExpense, Transaction } from '../src/types.js';
+import { AppSettings, Bill, Budget, CycleLog, CycleSettings, MonthTrendData, NotificationPreferences, PushSubscriptionInput, RecurringExpense, Transaction } from '../src/types.js';
 
 // ──────────────────────────────────────────────
 // Default data (shared between both storage modes)
@@ -110,6 +110,18 @@ type StoreData = {
   recurringExpenses: RecurringExpense[];
   cycleLogs: CycleLog[];
   cycleSettings: CycleSettings;
+  pushSubscriptions: StoredPushSubscription[];
+  notificationPreferences: Record<string, NotificationPreferences>;
+  notificationDeliveries: string[];
+};
+
+type StoredPushSubscription = PushSubscriptionInput & { userName: string; updatedAt: string };
+
+const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  dailyLogEnabled: false,
+  dailyLogTime: '20:00',
+  ovulationEnabled: false,
+  timezone: 'UTC',
 };
 
 // ──────────────────────────────────────────────
@@ -227,7 +239,27 @@ class PostgresDB {
         data JSONB NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT now()
       );
+
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        endpoint TEXT PRIMARY KEY,
+        user_name TEXT NOT NULL,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS notification_preferences (
+        user_name TEXT PRIMARY KEY,
+        data JSONB NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS notification_deliveries (
+        delivery_key TEXT PRIMARY KEY,
+        created_at TIMESTAMPTZ DEFAULT now()
+      );
     `);
+    await this.pool.query('ALTER TABLE cycle_logs ADD COLUMN IF NOT EXISTS medications JSONB');
   }
 
   private async seed() {
@@ -556,6 +588,7 @@ class PostgresDB {
       flow: r.flow || undefined,
       symptoms: Array.isArray(r.symptoms) ? r.symptoms : (typeof r.symptoms === 'string' ? JSON.parse(r.symptoms) : []),
       mood: Array.isArray(r.mood) ? r.mood : (typeof r.mood === 'string' ? JSON.parse(r.mood) : []),
+      medications: Array.isArray(r.medications) ? r.medications : (typeof r.medications === 'string' ? JSON.parse(r.medications) : []),
       painLevel: Number(r.pain_level || 0),
       notes: r.notes || undefined,
       isPeriodStart: Boolean(r.is_period_start),
@@ -566,12 +599,13 @@ class PostgresDB {
   async saveCycleLog(log: CycleLog): Promise<CycleLog> {
     await this.ensureReady();
     await this.pool.query(
-      `INSERT INTO cycle_logs (date, flow, symptoms, mood, pain_level, notes, is_period_start, is_period_end)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO cycle_logs (date, flow, symptoms, mood, medications, pain_level, notes, is_period_start, is_period_end)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        ON CONFLICT (date) DO UPDATE SET
          flow = EXCLUDED.flow,
          symptoms = EXCLUDED.symptoms,
          mood = EXCLUDED.mood,
+         medications = EXCLUDED.medications,
          pain_level = EXCLUDED.pain_level,
          notes = EXCLUDED.notes,
          is_period_start = EXCLUDED.is_period_start,
@@ -581,6 +615,7 @@ class PostgresDB {
         log.flow || null,
         JSON.stringify(log.symptoms || []),
         JSON.stringify(log.mood || []),
+        JSON.stringify(log.medications || []),
         log.painLevel || 0,
         log.notes || null,
         log.isPeriodStart || false,
@@ -613,6 +648,54 @@ class PostgresDB {
     );
     return updated;
   }
+
+  async upsertPushSubscription(userName: string, subscription: PushSubscriptionInput): Promise<void> {
+    await this.ensureReady();
+    await this.pool.query(
+      `INSERT INTO push_subscriptions (endpoint, user_name, p256dh, auth, updated_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (endpoint) DO UPDATE SET user_name = EXCLUDED.user_name, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth, updated_at = now()`,
+      [subscription.endpoint, userName, subscription.keys.p256dh, subscription.keys.auth],
+    );
+  }
+
+  async deletePushSubscription(userName: string, endpoint: string): Promise<void> {
+    await this.ensureReady();
+    await this.pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1 AND user_name = $2', [endpoint, userName]);
+  }
+
+  async getPushSubscriptions(): Promise<StoredPushSubscription[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT endpoint, user_name, p256dh, auth, updated_at FROM push_subscriptions');
+    return res.rows.map((row) => ({ endpoint: row.endpoint, userName: row.user_name, keys: { p256dh: row.p256dh, auth: row.auth }, updatedAt: row.updated_at?.toISOString?.() || String(row.updated_at) }));
+  }
+
+  async getNotificationPreferences(userName: string): Promise<NotificationPreferences> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT data FROM notification_preferences WHERE user_name = $1', [userName]);
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(res.rows[0]?.data || {}) };
+  }
+
+  async updateNotificationPreferences(userName: string, preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    await this.ensureReady();
+    const merged = { ...(await this.getNotificationPreferences(userName)), ...preferences };
+    await this.pool.query(
+      'INSERT INTO notification_preferences (user_name, data, updated_at) VALUES ($1, $2, now()) ON CONFLICT (user_name) DO UPDATE SET data = EXCLUDED.data, updated_at = now()',
+      [userName, JSON.stringify(merged)],
+    );
+    return merged;
+  }
+
+  async claimNotificationDelivery(deliveryKey: string): Promise<boolean> {
+    await this.ensureReady();
+    const result = await this.pool.query('INSERT INTO notification_deliveries (delivery_key) VALUES ($1) ON CONFLICT DO NOTHING', [deliveryKey]);
+    return (result.rowCount || 0) > 0;
+  }
+
+  async removePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+    await this.ensureReady();
+    await this.pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -633,20 +716,23 @@ class LocalFileDB {
 
   private load(): StoreData {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+    const createStore = (): StoreData => ({
+      settings: { ...DEFAULT_SETTINGS },
+      transactions: seedTransactions(),
+      budgets: [...DEFAULT_BUDGETS],
+      bills: [...DEFAULT_BILLS],
+      recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
+      cycleLogs: [],
+      cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
+      pushSubscriptions: [],
+      notificationPreferences: {},
+      notificationDeliveries: [],
+    });
     if (!fs.existsSync(DATA_FILE)) {
-      const initialStore = {
-        settings: { ...DEFAULT_SETTINGS },
-        transactions: seedTransactions(),
-        budgets: [...DEFAULT_BUDGETS],
-        bills: [...DEFAULT_BILLS],
-        recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
-        cycleLogs: [],
-        cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
-      };
+      const initialStore = createStore();
       fs.writeFileSync(DATA_FILE, JSON.stringify(initialStore, null, 2));
       return initialStore;
     }
-
     try {
       const parsed = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8')) as Partial<StoreData>;
       return {
@@ -657,18 +743,13 @@ class LocalFileDB {
         recurringExpenses: Array.isArray(parsed.recurringExpenses) ? parsed.recurringExpenses : [...DEFAULT_RECURRING_EXPENSES],
         cycleLogs: Array.isArray(parsed.cycleLogs) ? parsed.cycleLogs : [],
         cycleSettings: parsed.cycleSettings ? { ...DEFAULT_CYCLE_SETTINGS, ...parsed.cycleSettings } : { ...DEFAULT_CYCLE_SETTINGS },
+        pushSubscriptions: Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [],
+        notificationPreferences: parsed.notificationPreferences || {},
+        notificationDeliveries: Array.isArray(parsed.notificationDeliveries) ? parsed.notificationDeliveries : [],
       };
     } catch (err) {
       console.error('[LocalFileDB] Failed to read store.json; using defaults:', err);
-      const fallbackStore = {
-        settings: { ...DEFAULT_SETTINGS },
-        transactions: seedTransactions(),
-        budgets: [...DEFAULT_BUDGETS],
-        bills: [...DEFAULT_BILLS],
-        recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
-        cycleLogs: [],
-        cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
-      };
+      const fallbackStore = createStore();
       fs.writeFileSync(DATA_FILE, JSON.stringify(fallbackStore, null, 2));
       return fallbackStore;
     }
@@ -930,6 +1011,45 @@ class LocalFileDB {
     this.store.cycleSettings = { ...DEFAULT_CYCLE_SETTINGS, ...(this.store.cycleSettings || {}), ...newSettings };
     this.save();
     return this.store.cycleSettings;
+  }
+
+  async upsertPushSubscription(userName: string, subscription: PushSubscriptionInput): Promise<void> {
+    this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => item.endpoint !== subscription.endpoint);
+    this.store.pushSubscriptions.push({ ...subscription, userName, updatedAt: new Date().toISOString() });
+    this.save();
+  }
+
+  async deletePushSubscription(userName: string, endpoint: string): Promise<void> {
+    this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => !(item.endpoint === endpoint && item.userName === userName));
+    this.save();
+  }
+
+  async getPushSubscriptions(): Promise<StoredPushSubscription[]> {
+    return [...this.store.pushSubscriptions];
+  }
+
+  async getNotificationPreferences(userName: string): Promise<NotificationPreferences> {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(this.store.notificationPreferences[userName] || {}) };
+  }
+
+  async updateNotificationPreferences(userName: string, preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    const merged = { ...(await this.getNotificationPreferences(userName)), ...preferences };
+    this.store.notificationPreferences[userName] = merged;
+    this.save();
+    return merged;
+  }
+
+  async claimNotificationDelivery(deliveryKey: string): Promise<boolean> {
+    if (this.store.notificationDeliveries.includes(deliveryKey)) return false;
+    this.store.notificationDeliveries.push(deliveryKey);
+    this.store.notificationDeliveries = this.store.notificationDeliveries.slice(-1000);
+    this.save();
+    return true;
+  }
+
+  async removePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
+    this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => item.endpoint !== endpoint);
+    this.save();
   }
 }
 
