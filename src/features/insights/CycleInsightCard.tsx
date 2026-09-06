@@ -1,0 +1,10 @@
+import React from 'react';
+import { LockKeyhole, Sparkles } from 'lucide-react';
+import type { CycleInsight } from '../../types';
+
+interface CycleInsightCardProps { insights: CycleInsight[]; consent: boolean; loading: boolean; error?: string | null; onEnable: () => void; onRefresh: () => void; }
+
+export function CycleInsightCard({ insights, consent, loading, error, onEnable, onRefresh }: CycleInsightCardProps) {
+  if (!consent) return <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4"><div className="flex gap-3"><LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-teal-300" /><div><h3 className="font-bold text-white">بینش خصوصی چرخه</h3><p className="mt-1 text-xs leading-5 text-zinc-400">فقط با اجازه شما، جمع هزینه‌های دسته‌بندی‌شده و یادداشت‌های چرخه برای یافتن الگو تحلیل می‌شود.</p><button type="button" onClick={onEnable} className="mt-3 min-h-10 rounded-lg bg-teal-400 px-3 text-xs font-bold text-[#09221b]">فعال‌سازی در تنظیمات</button></div></div></section>;
+  return <section className="rounded-2xl border border-violet-300/15 bg-violet-300/[0.04] p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2 text-violet-100"><Sparkles className="h-4 w-4" /><h3 className="text-sm font-bold">الگوهای شخصی</h3></div><button type="button" onClick={onRefresh} className="text-xs font-bold text-violet-200">به‌روزرسانی</button></div>{loading ? <div className="shimmer mt-4 h-16" /> : null}{error ? <p role="alert" className="mt-3 text-xs text-rose-200">{error}</p> : null}{!loading && !error && insights.length === 0 ? <p className="mt-3 text-xs leading-5 text-zinc-400">برای یک الگوی قابل اتکا به داده بیشتری نیاز است. این بخش تشخیص پزشکی نیست.</p> : null}{insights.map((insight) => <article key={insight.id} className="mt-3 rounded-xl bg-black/15 p-3"><p className="text-sm leading-6 text-zinc-200">{insight.observation}</p><p className="mt-2 text-[11px] text-zinc-500">{insight.evidenceWindow.sampleDays} روز داده · اطمینان {insight.confidence === 'medium' ? 'متوسط' : 'کم'}</p><p className="mt-1 text-[10px] text-zinc-500">{insight.disclaimer}</p></article>)}</section>;
+}

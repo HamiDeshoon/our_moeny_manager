@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { db } from './db.js';
-import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult } from '../src/types.js';
+import { AIParsedVoice, AIScanReceipt, AIInsightResponse, AIParsedSheetResult, CycleInsight } from '../src/types.js';
 
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
 
@@ -449,6 +449,42 @@ TASK:
     },
     { validate: validateInsightsResult, label: 'SpendingInsights', maxRetries: 3 }
   );
+}
+
+function validateCycleInsights(data: { insights: CycleInsight[] }): string | null {
+  if (!Array.isArray(data.insights) || data.insights.length > 3) return 'Cycle insights must contain 0-3 items';
+  for (const insight of data.insights) {
+    if (!insight.observation || !insight.evidenceWindow?.start || !insight.evidenceWindow?.end) return 'Cycle insight is missing evidence';
+    if (!['low', 'medium'].includes(insight.confidence)) return 'Cycle insight has unsupported confidence';
+  }
+  return null;
+}
+
+export async function analyzeCycleSpendingPatterns(
+  data: { cycleDays: Array<{ date: string; flow?: string; symptoms?: string[]; mood?: string[] }>; expenseTotalsByPhase: Record<string, Record<string, number>> },
+  customKey?: string,
+): Promise<CycleInsight[]> {
+  const ai = getGeminiClient(customKey);
+  const prompt = `You are a cautious wellness data assistant. Analyze only the supplied aggregate dates, symptoms and category totals. Do not diagnose, make fertility claims, or prescribe treatment. Return 0-3 short observations only when the data supports them. Each observation must name the observed category/phase and an evidence window. Always set disclaimer exactly to "Informational pattern only; not medical advice.". Data: ${JSON.stringify(data)}`;
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      insights: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: {
+        id: { type: Type.STRING }, observation: { type: Type.STRING },
+        evidenceWindow: { type: Type.OBJECT, properties: { start: { type: Type.STRING }, end: { type: Type.STRING }, sampleDays: { type: Type.NUMBER } }, required: ['start', 'end', 'sampleDays'] },
+        confidence: { type: Type.STRING }, disclaimer: { type: Type.STRING },
+      }, required: ['id', 'observation', 'evidenceWindow', 'confidence', 'disclaimer'] } },
+    },
+    required: ['insights'],
+  };
+  const response = await callGeminiWithRetry<{ insights: CycleInsight[] }>(
+    async () => {
+      const result = await ai.models.generateContent({ model: MODEL, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema } });
+      return JSON.parse(result.text || '{}') as { insights: CycleInsight[] };
+    },
+    { validate: validateCycleInsights, label: 'CycleInsights', maxRetries: 2 },
+  );
+  return response.insights.map((insight) => ({ ...insight, disclaimer: 'Informational pattern only; not medical advice.' }));
 }
 
 // ──────────────────────────────────────────────

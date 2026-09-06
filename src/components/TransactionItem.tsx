@@ -1,113 +1,44 @@
 import React from 'react';
-import { Edit3, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowDownRight, ArrowRightLeft, ArrowUpRight, PencilLine, Trash2 } from 'lucide-react';
 import { AppSettings, Transaction } from '../types';
-import { formatMoney, formatJalaliDate } from '../utils/formatters';
+import { formatJalaliDate, formatMoney } from '../utils/formatters';
 
 interface TransactionItemProps {
   tx: Transaction;
   settings: AppSettings;
+  pending?: boolean;
   onEdit: (tx: Transaction) => void;
   onDelete: (id: string) => void;
+  onOpenActions: (tx: Transaction) => void;
 }
 
-export function TransactionItem({ tx, settings, onEdit, onDelete }: TransactionItemProps) {
+export function TransactionItem({ tx, settings, pending = false, onEdit, onDelete, onOpenActions }: TransactionItemProps) {
   const symbol = settings.currencySymbol || 'تومان';
-  const isPersianContext = symbol.includes('تومان') || symbol.toLowerCase().includes('toman');
-
-  const getPayerBadge = (paidBy: string) => {
-    if (paidBy === settings.partnerA.id) {
-      return (
-        <span className="inline-flex items-center gap-0.5 sm:space-x-1 px-1.5 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 whitespace-nowrap">
-          <span>{settings.partnerA.avatar}</span>
-          <span className="truncate max-w-[60px] sm:max-w-none">{settings.partnerA.name}</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <span>{settings.partnerB.avatar}</span>
-        <span>{settings.partnerB.name}</span>
-      </span>
-    );
-  };
+  const typeIcon = tx.type === 'INCOME' ? ArrowDownRight : tx.type === 'TRANSFER' ? ArrowRightLeft : ArrowUpRight;
+  const TypeIcon = typeIcon;
+  const amountColor = tx.type === 'EXPENSE' ? 'text-rose-300' : tx.type === 'INCOME' ? 'text-teal-300' : 'text-violet-300';
+  const action = (offset: number) => { if (offset > 92) onEdit(tx); if (offset < -92) onDelete(tx.id); };
 
   return (
-    <div className="px-3 py-2.5 sm:px-4 sm:py-3.5 hover:bg-white/5 transition-colors flex items-center gap-2.5 sm:gap-4 group border-b border-white/5 last:border-0">
-      {/* Type icon - smaller on mobile */}
-      <div
-        className={`p-1.5 sm:p-2.5 rounded-lg sm:rounded-xl flex-shrink-0 border ${
-          tx.type === 'EXPENSE'
-            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-            : tx.type === 'TRANSFER'
-            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-            : tx.type === 'INCOME'
-            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-        }`}
+    <div className="relative overflow-hidden border-b border-white/5 last:border-0">
+      <div aria-hidden="true" className="absolute inset-y-0 right-0 flex w-28 items-center justify-center bg-sky-500/80 text-white"><PencilLine className="h-5 w-5" /></div>
+      <div aria-hidden="true" className="absolute inset-y-0 left-0 flex w-28 items-center justify-center bg-rose-500/85 text-white"><Trash2 className="h-5 w-5" /></div>
+      <motion.article
+        drag="x"
+        dragConstraints={{ left: -112, right: 112 }}
+        dragElastic={0.08}
+        onDragEnd={(_, info) => action(info.offset.x)}
+        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onOpenActions(tx); } }}
+        tabIndex={0}
+        aria-describedby={`gesture-${tx.id}`}
+        className={`relative flex min-h-[76px] items-center gap-3 bg-[#14231e] px-3 py-3 outline-none ${pending ? 'opacity-60' : ''}`}
       >
-        {tx.type === 'EXPENSE' ? (
-          <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        ) : tx.type === 'TRANSFER' ? (
-          <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        ) : tx.type === 'INCOME' ? (
-          <ArrowDownRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        ) : (
-          <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        )}
-      </div>
-
-      {/* Title + meta - takes available space, truncates properly */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5">
-          <h4 className="text-xs sm:text-sm font-bold text-zinc-100 truncate min-w-0 flex-1">{tx.title}</h4>
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-xs text-zinc-500">
-          {getPayerBadge(tx.paidBy)}
-          <span className="hidden sm:inline text-[10px] bg-white/5 text-zinc-400 px-1.5 py-0.5 rounded-md border border-white/10 font-medium truncate max-w-[100px]">
-            {tx.type === 'TRANSFER' ? 'انتقال بودجه' : tx.category}
-          </span>
-          <span className="font-mono text-zinc-400 whitespace-nowrap">
-            {settings.useJalaliDate || isPersianContext ? formatJalaliDate(tx.date) : tx.date}
-          </span>
-        </div>
-        {tx.notes && (
-          <p className="text-[10px] sm:text-[11px] text-zinc-500 truncate mt-0.5 italic">"{tx.notes}"</p>
-        )}
-      </div>
-
-      {/* Amount + actions - right aligned, compact */}
-      <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
-        <span
-          className={`text-sm sm:text-base font-bold font-mono whitespace-nowrap ${
-            tx.type === 'EXPENSE'
-              ? 'text-rose-400'
-              : tx.type === 'TRANSFER'
-              ? 'text-indigo-400'
-              : tx.type === 'INCOME'
-              ? 'text-emerald-400'
-              : 'text-zinc-100'
-          }`}
-        >
-          {formatMoney(tx.amount, symbol)}
-        </span>
-
-        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => onEdit(tx)}
-            className="p-1 sm:p-2 text-zinc-500 hover:text-indigo-400 hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
-            title="ویرایش"
-          >
-            <Edit3 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(tx.id)}
-            className="p-1 sm:p-2 text-zinc-500 hover:text-rose-400 hover:bg-white/5 rounded-lg sm:rounded-xl transition-colors"
-            title="حذف"
-          >
-            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-          </button>
-        </div>
-      </div>
+        <span id={`gesture-${tx.id}`} className="sr-only">برای ویرایش به راست و برای حذف به چپ بکشید. برای گزینه‌ها Enter را فشار دهید.</span>
+        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${tx.type === 'EXPENSE' ? 'border-rose-300/20 bg-rose-300/10 text-rose-200' : 'border-teal-300/20 bg-teal-300/10 text-teal-200'}`}><TypeIcon className="h-4 w-4" /></div>
+        <div className="min-w-0 flex-1"><h3 className="truncate text-sm font-bold text-zinc-100">{tx.title}</h3><p className="mt-1 truncate text-[11px] text-zinc-500">{tx.type === 'TRANSFER' ? 'انتقال' : tx.category} · {settings.useJalaliDate ? formatJalaliDate(tx.date) : tx.date}</p></div>
+        <div className="shrink-0 text-left"><p className={`font-mono text-sm font-bold ${amountColor}`}>{formatMoney(tx.amount, symbol)}</p><p className="mt-1 text-[10px] text-zinc-500">{tx.paidBy === settings.partnerA.id ? settings.partnerA.name : settings.partnerB.name}</p></div>
+      </motion.article>
     </div>
   );
 }

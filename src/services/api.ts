@@ -18,6 +18,8 @@ import {
   IgnoredTransactionResponse,
   TodoItem,
   Transaction,
+  NotificationPreferences,
+  PushSubscriptionInput,
   WishGoal,
 } from '../types';
 
@@ -235,4 +237,14 @@ export const api = {
   addImportantDate: (date: Omit<ImportantDate,'id'|'createdAt'>) => fetchJSON<ImportantDate>('/dates', { method:'POST', body:JSON.stringify(date) }),
   updateImportantDate: (id:string, updates:Partial<ImportantDate>) => fetchJSON<ImportantDate>(`/dates/${id}`, { method:'PUT', body:JSON.stringify(updates) }),
   deleteImportantDate: (id:string) => fetchJSON<{success:boolean}>(`/dates/${id}`, { method:'DELETE' }),
+
+  // Optional push reminders
+  getPushPublicKey: () => fetchJSON<{ publicKey: string }>('/push/public-key'),
+  getNotificationPreferences: () => fetchJSON<NotificationPreferences>('/push/preferences'),
+  updateNotificationPreferences: (preferences: Partial<NotificationPreferences>) =>
+    fetchJSON<NotificationPreferences>('/push/preferences', { method: 'PUT', body: JSON.stringify(preferences) }),
+  savePushSubscription: (subscription: PushSubscriptionInput) =>
+    fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription) }),
+  deletePushSubscription: (endpoint: string) =>
+    fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 };

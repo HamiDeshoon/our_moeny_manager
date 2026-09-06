@@ -177,6 +177,7 @@ export interface CycleLog {
   flow?: FlowIntensity;
   symptoms?: string[];
   mood?: string[];
+  medications?: Medication[];
   painLevel?: number; // 0-5
   notes?: string;
   isPeriodStart?: boolean;
@@ -191,9 +192,31 @@ export interface CycleSettings {
   lastPeriodStart?: string; // YYYY-MM-DD
   trackPartnerId?: string; // partner_b
   partnerNotes?: string;
+  healthInsightsConsent?: boolean;
 }
 
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal';
+export type Medication = 'painkillers' | 'birth-control';
+
+export interface CycleInsight {
+  id: string;
+  observation: string;
+  evidenceWindow: { start: string; end: string; sampleDays: number };
+  confidence: 'low' | 'medium';
+  disclaimer: 'Informational pattern only; not medical advice.';
+}
+
+export interface NotificationPreferences {
+  dailyLogEnabled: boolean;
+  dailyLogTime: string;
+  ovulationEnabled: boolean;
+  timezone: string;
+}
+
+export interface PushSubscriptionInput {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}
 
 export interface DayCycleInfo {
   phase: CyclePhase | 'normal';
