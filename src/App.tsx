@@ -11,6 +11,7 @@ import { Header } from './components/Header';
 import { SummaryCards } from './components/SummaryCards';
 import { SkeletonList, SkeletonCard } from './components/SkeletonLoader';
 import { exportToCSV } from './utils/exporter';
+import { AuthGate } from './components/AuthGate';
 
 // Lazy load Tab Views
 const TransactionList = lazy(() => import('./components/TransactionList').then(m => ({ default: m.TransactionList })));
@@ -20,6 +21,7 @@ const BillTracker = lazy(() => import('./components/BillTracker').then(m => ({ d
 const AIAdvisor = lazy(() => import('./components/AIAdvisor').then(m => ({ default: m.AIAdvisor })));
 const DataToolsPanel = lazy(() => import('./components/DataToolsPanel').then(m => ({ default: m.DataToolsPanel })));
 const CycleTracker = lazy(() => import('./components/CycleTracker').then(m => ({ default: m.CycleTracker })));
+const CoupleHub = lazy(() => import('./components/CoupleHub').then(m => ({ default: m.CoupleHub })));
 
 // Lazy load Modals
 const TransactionForm = lazy(() => import('./components/TransactionForm').then(m => ({ default: m.TransactionForm })));
@@ -48,7 +50,7 @@ export default function App() {
     return `${startDate}..${endDate}`;
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle' | 'couple'>('dashboard');
 
   // Auth
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -125,7 +127,9 @@ export default function App() {
     haptic('success');
   });
 
-  useEffect(() => { loadData(); }, [selectedMonth]);
+  useEffect(() => {
+    if (currentUser) loadData();
+  }, [selectedMonth, currentUser]);
 
   // Handlers with haptic feedback
   const handleSaveTransaction = useCallback(async (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
@@ -228,6 +232,10 @@ export default function App() {
     );
   }
 
+  if (!currentUser) {
+    return <AuthGate onLoginSuccess={(user) => { setCurrentUser(user); loadData(); }} />;
+  }
+
   if (loadError && !settings) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center safe-area-top">
@@ -273,16 +281,6 @@ export default function App() {
         onTabChange={handleTabChange}
       />
 
-      {!isAuthed && (
-        <div className="mx-auto mt-4 max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-center shadow-lg shadow-amber-950/10">
-            <p className="text-sm text-amber-100 font-medium">
-              ⚠️ شما وارد نشده‌اید. برای افزودن، حذف یا تغییر اطلاعات، ابتدا وارد شوید.
-              <button onClick={() => setIsLoginModalOpen(true)} className="mr-2 rounded-lg bg-amber-300/15 px-3 py-1 font-bold text-amber-200 hover:bg-amber-300/25 transition">ورود</button>
-            </p>
-          </div>
-        </div>
-      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <SummaryCards summary={activeSummary} settings={activeSettings} />
@@ -348,6 +346,15 @@ export default function App() {
                   onSaveLog={handleSaveCycleLog}
                   onDeleteLog={handleDeleteCycleLog}
                   onUpdateSettings={handleUpdateCycleSettings}
+                />
+              </motion.div>
+            )}
+
+            {activeTab === 'couple' && (
+              <motion.div key="couple" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
+                <CoupleHub
+                  settings={activeSettings}
+                  currentUser={currentUser}
                 />
               </motion.div>
             )}

@@ -204,3 +204,51 @@ export interface DayCycleInfo {
   dayOfCycle?: number;
   log?: CycleLog;
 }
+
+// ──────────────────────────────────────────────
+// Couple Hub Feature Types
+// ──────────────────────────────────────────────
+
+export type GroceryCategory = 'Produce'|'Dairy'|'Bakery'|'Meat & Fish'|'Pantry'|'Frozen'|'Beverages'|'Cleaning'|'Personal Care'|'Other';
+
+export interface GroceryItem {
+  id: string; title: string; category: GroceryCategory; quantity?: string;
+  isChecked: boolean; checkedAt?: string; checkedBy?: string;
+  assignedTo?: string; addedBy: string; createdAt: string;
+}
+
+export type TodoPriority = 'LOW'|'MEDIUM'|'HIGH'|'URGENT';
+export type TodoCategory = 'Cleaning'|'Shopping'|'Cooking'|'Finance'|'Health'|'Home Repair'|'Social'|'Other';
+
+export interface TodoItem {
+  id: string; title: string; description?: string; assignedTo?: string;
+  priority: TodoPriority; dueDate?: string; isCompleted: boolean;
+  completedAt?: string; completedBy?: string; category: TodoCategory;
+  createdBy: string; createdAt: string;
+}
+
+export type NoteCategory = 'General'|'Memories'|'Plans'|'Reminders'|'Shopping List'|'Ideas';
+export type NoteColor = 'zinc'|'indigo'|'emerald'|'amber'|'rose'|'violet';
+
+export interface CoupleNote {
+  id: string; title: string; content: string; category: NoteCategory;
+  color: NoteColor; isPinned: boolean; author: string;
+  createdAt: string; updatedAt: string;
+}
+
+export type GoalCategory = 'Travel'|'Home'|'Electronics'|'Furniture'|'Vehicle'|'Education'|'Health'|'Entertainment'|'Gift'|'Emergency Fund'|'Other';
+
+export interface WishGoal {
+  id: string; title: string; targetAmount: number; currentAmount: number;
+  category: GoalCategory; icon?: string; targetDate?: string;
+  isCompleted: boolean; completedAt?: string; isShared: boolean;
+  owner: string; priority: TodoPriority; notes?: string; createdAt: string;
+}
+
+export type DateType = 'ANNIVERSARY'|'BIRTHDAY'|'APPOINTMENT'|'EVENT'|'REMINDER'|'HOLIDAY';
+
+export interface ImportantDate {
+  id: string; title: string; date: string; type: DateType;
+  isRecurringYearly: boolean; notes?: string; reminderDaysBefore?: number;
+  icon?: string; color?: NoteColor; createdBy: string; createdAt: string;
+}

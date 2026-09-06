@@ -35,7 +35,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   /* Prevent iOS rubber-band scroll */
-  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
 }
 
 /* Custom sleek scrollbar */
@@ -141,3 +141,12 @@ body {
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
 }
+
+.scroll-contain { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.tab-nav-fade { position: relative; }
+.tab-nav-fade::after {
+  content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 32px;
+  background: linear-gradient(to right, transparent, #09090b); pointer-events: none;
+}
+[dir="rtl"] .tab-nav-fade::after { right: auto; left: 0; background: linear-gradient(to left, transparent, #09090b); }
+html { scroll-padding-top: 112px; }

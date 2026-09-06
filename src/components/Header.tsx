@@ -15,8 +15,8 @@ interface HeaderProps {
   onOpenSettings: () => void;
   currentUser: AuthUser | null;
   onOpenLogin: () => void;
-  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle';
-  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle') => void;
+  activeTab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle' | 'couple';
+  onTabChange: (tab: 'dashboard' | 'transactions' | 'budgets' | 'bills' | 'insights' | 'tools' | 'cycle' | 'couple') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -126,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({
                 className="flex items-center space-x-1.5 rtl:space-x-reverse bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
                 title="Voice / Text Expense AI Parser"
               >
-                <Mic className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+                <Mic className="w-3.5 h-3.5 text-indigo-400" />
                 <span>Voice</span>
               </button>
 
@@ -181,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Navigation Tabs and Mobile Actions */}
         <div className="flex items-center justify-between border-t border-white/5">
-          <div className="flex space-x-1 rtl:space-x-reverse pt-2 pb-2 overflow-x-auto no-scrollbar text-xs flex-1">
+          <div className="relative tab-nav-fade flex space-x-1 rtl:space-x-reverse pt-2 pb-2 overflow-x-auto no-scrollbar text-xs flex-1">
             <button
               onClick={() => onTabChange('dashboard')}
               className={`px-3 sm:px-3.5 py-1.5 rounded-md font-medium whitespace-nowrap transition cursor-pointer ${
@@ -221,6 +221,16 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               Recurring Bills
+            </button>
+            <button
+              onClick={() => onTabChange('couple')}
+              className={`px-3 sm:px-3.5 py-1.5 rounded-md font-medium whitespace-nowrap transition flex items-center space-x-1.5 rtl:space-x-reverse cursor-pointer ${
+                activeTab === 'couple'
+                  ? 'bg-rose-500/15 text-rose-300 font-bold border border-rose-500/30'
+                  : 'text-zinc-400 hover:text-rose-400 hover:bg-white/5'
+              }`}
+            >
+              <span>💑 زوج‌ها</span>
             </button>
             <button
               onClick={() => onTabChange('insights')}

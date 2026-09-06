@@ -7,13 +7,18 @@ import {
   AuthUser,
   Bill,
   Budget,
+  CoupleNote,
   CycleLog,
   CycleSettings,
+  GroceryItem,
+  ImportantDate,
   MonthTrendData,
   RecurringExpense,
   HouseholdSummary,
   IgnoredTransactionResponse,
+  TodoItem,
   Transaction,
+  WishGoal,
 } from '../types';
 
 const API_BASE = '/api';
@@ -198,4 +203,36 @@ export const api = {
   getCycleSettings: () => fetchJSON<CycleSettings>('/cycle/settings'),
   updateCycleSettings: (settings: Partial<CycleSettings>) =>
     fetchJSON<CycleSettings>('/cycle/settings', { method: 'POST', body: JSON.stringify(settings) }),
+
+  // Grocery
+  getGroceryItems: () => fetchJSON<GroceryItem[]>('/grocery'),
+  addGroceryItem: (item: Omit<GroceryItem,'id'|'createdAt'|'isChecked'>) => fetchJSON<GroceryItem>('/grocery', { method:'POST', body:JSON.stringify(item) }),
+  toggleGroceryItem: (id:string, isChecked:boolean) => fetchJSON<GroceryItem>(`/grocery/${id}/toggle`, { method:'PATCH', body:JSON.stringify({isChecked}) }),
+  deleteGroceryItem: (id:string) => fetchJSON<{success:boolean}>(`/grocery/${id}`, { method:'DELETE' }),
+  clearCheckedGroceryItems: () => fetchJSON<{success:boolean}>('/grocery/checked/clear', { method:'DELETE' }),
+
+  // Todos
+  getTodos: () => fetchJSON<TodoItem[]>('/todos'),
+  addTodo: (item: Omit<TodoItem,'id'|'createdAt'|'isCompleted'>) => fetchJSON<TodoItem>('/todos', { method:'POST', body:JSON.stringify(item) }),
+  updateTodo: (id:string, updates:Partial<TodoItem>) => fetchJSON<TodoItem>(`/todos/${id}`, { method:'PATCH', body:JSON.stringify(updates) }),
+  deleteTodo: (id:string) => fetchJSON<{success:boolean}>(`/todos/${id}`, { method:'DELETE' }),
+
+  // Notes
+  getCoupleNotes: () => fetchJSON<CoupleNote[]>('/notes'),
+  addCoupleNote: (note: Omit<CoupleNote,'id'|'createdAt'|'updatedAt'|'isPinned'>) => fetchJSON<CoupleNote>('/notes', { method:'POST', body:JSON.stringify(note) }),
+  updateCoupleNote: (id:string, updates:Partial<CoupleNote>) => fetchJSON<CoupleNote>(`/notes/${id}`, { method:'PUT', body:JSON.stringify(updates) }),
+  toggleNotePin: (id:string, isPinned:boolean) => fetchJSON<CoupleNote>(`/notes/${id}/pin`, { method:'PATCH', body:JSON.stringify({isPinned}) }),
+  deleteCoupleNote: (id:string) => fetchJSON<{success:boolean}>(`/notes/${id}`, { method:'DELETE' }),
+
+  // Goals
+  getWishGoals: () => fetchJSON<WishGoal[]>('/goals'),
+  addWishGoal: (goal: Omit<WishGoal,'id'|'createdAt'|'isCompleted'|'currentAmount'>) => fetchJSON<WishGoal>('/goals', { method:'POST', body:JSON.stringify(goal) }),
+  updateWishGoal: (id:string, updates:Partial<WishGoal>) => fetchJSON<WishGoal>(`/goals/${id}`, { method:'PATCH', body:JSON.stringify(updates) }),
+  deleteWishGoal: (id:string) => fetchJSON<{success:boolean}>(`/goals/${id}`, { method:'DELETE' }),
+
+  // Important Dates
+  getImportantDates: () => fetchJSON<ImportantDate[]>('/dates'),
+  addImportantDate: (date: Omit<ImportantDate,'id'|'createdAt'>) => fetchJSON<ImportantDate>('/dates', { method:'POST', body:JSON.stringify(date) }),
+  updateImportantDate: (id:string, updates:Partial<ImportantDate>) => fetchJSON<ImportantDate>(`/dates/${id}`, { method:'PUT', body:JSON.stringify(updates) }),
+  deleteImportantDate: (id:string) => fetchJSON<{success:boolean}>(`/dates/${id}`, { method:'DELETE' }),
 };

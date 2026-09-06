@@ -68,6 +68,9 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const goToPage = (page: number) => { setCurrentPage(page); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  React.useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedCategory, selectedPayer, selectedType, datePreset, customStartDate, customEndDate, minAmount, maxAmount, sortBy]);
+
   const symbol = settings.currencySymbol || 'تومان';
   const isPersianContext = symbol.includes('تومان') || symbol.toLowerCase().includes('toman');
 
@@ -539,14 +542,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
           <div className="flex items-center space-x-2">
             <button
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              onClick={() => goToPage(Math.max(1, currentPage - 1))}
               className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-zinc-400 rounded-lg transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <button
               disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              onClick={() => goToPage(Math.min(totalPages, currentPage + 1))}
               className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 disabled:opacity-40 text-zinc-400 rounded-lg transition"
             >
               <ChevronRight className="w-4 h-4" />

@@ -30,6 +30,9 @@ export function usePullToRefresh(onRefresh: () => Promise<void>, enabled = true)
     if (!pullingRef.current || isRefreshing) return;
     const delta = e.touches[0].clientY - startYRef.current;
     if (delta > 0) {
+      if (delta > 5) {
+        e.preventDefault();
+      }
       // Dampen the pull (resistance)
       const dampened = Math.min(delta * 0.4, MAX_PULL);
       setPullDistance(dampened);
@@ -56,7 +59,7 @@ export function usePullToRefresh(onRefresh: () => Promise<void>, enabled = true)
 
   useEffect(() => {
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
-    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     return () => {
       window.removeEventListener('touchstart', handleTouchStart);

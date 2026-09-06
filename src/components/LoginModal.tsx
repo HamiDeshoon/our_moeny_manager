@@ -19,19 +19,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onLoginSuccess,
   currentUser,
 }) => {
-  const [username, setUsername] = useState('hamid');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleQuickSelect = (userKey: 'hamid' | 'fati') => {
-    if (userKey === 'hamid') {
-      setUsername('hamid');
-    } else {
-      setUsername('fati');
-    }
-    setErrorMsg(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,51 +57,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <div className="p-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20">
             <ShieldCheck className="w-5 h-5" />
           </div>
-          <p>لطفا نام کاربری خود را برای دسترسی انتخاب کنید.</p>
-        </div>
-
-        {/* Quick User Selection */}
-        <div>
-          <label className="text-sm font-medium text-zinc-300 block mb-2">انتخاب سریع:</label>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => handleQuickSelect('hamid')}
-              className={`p-3 rounded-xl border text-right transition-all flex items-center justify-between ${
-                username === 'hamid'
-                  ? 'border-indigo-500/50 bg-indigo-500/10'
-                  : 'border-white/10 bg-white/5 hover:bg-white/10'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">👨‍💼</span>
-                <div>
-                  <div className="text-xs font-bold text-zinc-200">کاربر اول</div>
-                  <div className="text-[10px] text-zinc-500">کاربر فعال</div>
-                </div>
-              </div>
-              {username === 'hamid' && <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickSelect('fati')}
-              className={`p-3 rounded-xl border text-right transition-all flex items-center justify-between ${
-                username === 'fati'
-                  ? 'border-emerald-500/50 bg-emerald-500/10'
-                  : 'border-white/10 bg-white/5 hover:bg-white/10'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-xl">👩‍⚕️</span>
-                <div>
-                  <div className="text-xs font-bold text-zinc-200">کاربر دوم</div>
-                  <div className="text-[10px] text-zinc-500">کاربر فعال</div>
-                </div>
-              </div>
-              {username === 'fati' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
-            </button>
-          </div>
+          <p>لطفا نام کاربری و رمز عبور خود را برای دسترسی وارد کنید.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

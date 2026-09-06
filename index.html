@@ -2,7 +2,7 @@
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="DuoSpend — Smart household expense tracker for couples. AI-powered voice entry, receipt scanning, budget planning and financial analytics." />
 
     <!-- PWA -->
@@ -31,7 +31,7 @@
     <!-- iOS Dynamic Island / Notch safe area via CSS env() -->
     <style>
       :root { --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px); }
-      html, body { overscroll-behavior: none; -webkit-overflow-scrolling: touch; }
+      html { overscroll-behavior-x: none; }
       /* Prevent iOS tap highlight & text selection on UI controls */
       button, [role="button"] { -webkit-tap-highlight-color: transparent; user-select: none; }
     </style>

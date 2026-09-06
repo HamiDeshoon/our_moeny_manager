@@ -64,7 +64,7 @@ export function BottomSheet({ isOpen, onClose, title, children, fullHeight = fal
             </div>
 
             {/* Content (Scrollable) */}
-            <div className="p-6 overflow-y-auto no-scrollbar overscroll-contain">
+            <div className="p-6 overflow-y-auto no-scrollbar scroll-contain">
               {children}
             </div>
           </motion.div>

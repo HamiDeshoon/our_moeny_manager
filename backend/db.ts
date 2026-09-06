@@ -1,7 +1,22 @@
 import fs from 'fs';
 import path from 'path';
 import { Pool } from 'pg';
-import { AppSettings, Bill, Budget, CycleLog, CycleSettings, MonthTrendData, RecurringExpense, Transaction } from '../src/types.js';
+import {
+  AppSettings,
+  Bill,
+  Budget,
+  CoupleNote,
+  CycleLog,
+  CycleSettings,
+  GroceryItem,
+  ImportantDate,
+  MonthTrendData,
+  NoteColor,
+  RecurringExpense,
+  TodoItem,
+  Transaction,
+  WishGoal,
+} from '../src/types.js';
 
 // ──────────────────────────────────────────────
 // Default data (shared between both storage modes)
@@ -110,6 +125,11 @@ type StoreData = {
   recurringExpenses: RecurringExpense[];
   cycleLogs: CycleLog[];
   cycleSettings: CycleSettings;
+  groceryItems: GroceryItem[];
+  todos: TodoItem[];
+  coupleNotes: CoupleNote[];
+  wishGoals: WishGoal[];
+  importantDates: ImportantDate[];
 };
 
 // ──────────────────────────────────────────────
@@ -226,6 +246,77 @@ class PostgresDB {
         id INTEGER PRIMARY KEY DEFAULT 1,
         data JSONB NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT now()
+      );
+
+      CREATE TABLE IF NOT EXISTS grocery_items (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL,
+        quantity TEXT,
+        is_checked BOOLEAN DEFAULT false,
+        checked_at TEXT,
+        checked_by TEXT,
+        assigned_to TEXT,
+        added_by TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS todos (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        assigned_to TEXT,
+        priority TEXT NOT NULL DEFAULT 'MEDIUM',
+        due_date TEXT,
+        is_completed BOOLEAN DEFAULT false,
+        completed_at TEXT,
+        completed_by TEXT,
+        category TEXT NOT NULL DEFAULT 'Other',
+        created_by TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS couple_notes (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'General',
+        color TEXT NOT NULL DEFAULT 'zinc',
+        is_pinned BOOLEAN DEFAULT false,
+        author TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS wish_goals (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        target_amount NUMERIC NOT NULL,
+        current_amount NUMERIC NOT NULL DEFAULT 0,
+        category TEXT NOT NULL DEFAULT 'Other',
+        icon TEXT,
+        target_date TEXT,
+        is_completed BOOLEAN DEFAULT false,
+        completed_at TEXT,
+        is_shared BOOLEAN DEFAULT true,
+        owner TEXT NOT NULL,
+        priority TEXT NOT NULL DEFAULT 'MEDIUM',
+        notes TEXT,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS important_dates (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'EVENT',
+        is_recurring_yearly BOOLEAN DEFAULT false,
+        notes TEXT,
+        reminder_days_before INTEGER DEFAULT 1,
+        icon TEXT,
+        color TEXT DEFAULT 'indigo',
+        created_by TEXT NOT NULL,
+        created_at TEXT NOT NULL
       );
     `);
   }
@@ -613,6 +704,377 @@ class PostgresDB {
     );
     return updated;
   }
+
+  // ── Helper Row Transformers for Couple Features ──
+  private rowToGrocery(r: any): GroceryItem {
+    return {
+      id: r.id,
+      title: r.title,
+      category: r.category,
+      quantity: r.quantity || undefined,
+      isChecked: Boolean(r.is_checked),
+      checkedAt: r.checked_at || undefined,
+      checkedBy: r.checked_by || undefined,
+      assignedTo: r.assigned_to || undefined,
+      addedBy: r.added_by,
+      createdAt: r.created_at,
+    };
+  }
+
+  private rowToTodo(r: any): TodoItem {
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      assignedTo: r.assigned_to || undefined,
+      priority: r.priority,
+      dueDate: r.due_date || undefined,
+      isCompleted: Boolean(r.is_completed),
+      completedAt: r.completed_at || undefined,
+      completedBy: r.completed_by || undefined,
+      category: r.category,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+    };
+  }
+
+  private rowToNote(r: any): CoupleNote {
+    return {
+      id: r.id,
+      title: r.title,
+      content: r.content,
+      category: r.category,
+      color: r.color,
+      isPinned: Boolean(r.is_pinned),
+      author: r.author,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    };
+  }
+
+  private rowToGoal(r: any): WishGoal {
+    return {
+      id: r.id,
+      title: r.title,
+      targetAmount: Number(r.target_amount),
+      currentAmount: Number(r.current_amount || 0),
+      category: r.category,
+      icon: r.icon || undefined,
+      targetDate: r.target_date || undefined,
+      isCompleted: Boolean(r.is_completed),
+      completedAt: r.completed_at || undefined,
+      isShared: Boolean(r.is_shared),
+      owner: r.owner,
+      priority: r.priority,
+      notes: r.notes || undefined,
+      createdAt: r.created_at,
+    };
+  }
+
+  private rowToDate(r: any): ImportantDate {
+    return {
+      id: r.id,
+      title: r.title,
+      date: r.date,
+      type: r.type,
+      isRecurringYearly: Boolean(r.is_recurring_yearly),
+      notes: r.notes || undefined,
+      reminderDaysBefore: r.reminder_days_before !== null && r.reminder_days_before !== undefined ? Number(r.reminder_days_before) : undefined,
+      icon: r.icon || undefined,
+      color: r.color || undefined,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+    };
+  }
+
+  // ── Grocery Items ──
+  async getGroceryItems(): Promise<GroceryItem[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM grocery_items ORDER BY created_at DESC');
+    return res.rows.map(r => this.rowToGrocery(r));
+  }
+
+  async addGroceryItem(item: Omit<GroceryItem, 'id' | 'createdAt' | 'isChecked'>): Promise<GroceryItem> {
+    await this.ensureReady();
+    const id = genId('groc');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO grocery_items (id, title, category, quantity, is_checked, checked_at, checked_by, assigned_to, added_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [id, item.title, item.category, item.quantity || null, false, null, null, item.assignedTo || null, item.addedBy, createdAt]
+    );
+    return { ...item, id, isChecked: false, createdAt };
+  }
+
+  async toggleGroceryItem(id: string, isChecked: boolean, checkedBy?: string): Promise<GroceryItem | null> {
+    await this.ensureReady();
+    const checkedAt = isChecked ? new Date().toISOString() : null;
+    const checkedByVal = isChecked ? (checkedBy || null) : null;
+    const res = await this.pool.query(
+      'UPDATE grocery_items SET is_checked = $1, checked_at = $2, checked_by = $3 WHERE id = $4 RETURNING *',
+      [isChecked, checkedAt, checkedByVal, id]
+    );
+    if (res.rows.length === 0) return null;
+    return this.rowToGrocery(res.rows[0]);
+  }
+
+  async deleteGroceryItem(id: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM grocery_items WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  async clearCheckedGroceryItems(): Promise<boolean> {
+    await this.ensureReady();
+    await this.pool.query('DELETE FROM grocery_items WHERE is_checked = true');
+    return true;
+  }
+
+  // ── Todos & Chores ──
+  async getTodos(): Promise<TodoItem[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM todos ORDER BY created_at DESC');
+    return res.rows.map(r => this.rowToTodo(r));
+  }
+
+  async addTodo(item: Omit<TodoItem, 'id' | 'createdAt' | 'isCompleted'>): Promise<TodoItem> {
+    await this.ensureReady();
+    const id = genId('todo');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO todos (id, title, description, assigned_to, priority, due_date, is_completed, completed_at, completed_by, category, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        id,
+        item.title,
+        item.description || null,
+        item.assignedTo || null,
+        item.priority || 'MEDIUM',
+        item.dueDate || null,
+        false,
+        null,
+        null,
+        item.category || 'Other',
+        item.createdBy,
+        createdAt,
+      ]
+    );
+    return { ...item, id, isCompleted: false, createdAt };
+  }
+
+  async updateTodo(id: string, updates: Partial<TodoItem>, completedBy?: string): Promise<TodoItem | null> {
+    await this.ensureReady();
+    const curRes = await this.pool.query('SELECT * FROM todos WHERE id = $1', [id]);
+    if (curRes.rows.length === 0) return null;
+    const current = this.rowToTodo(curRes.rows[0]);
+    const merged: TodoItem = { ...current, ...updates };
+    if (updates.isCompleted !== undefined) {
+      merged.isCompleted = updates.isCompleted;
+      merged.completedAt = updates.isCompleted ? new Date().toISOString() : undefined;
+      merged.completedBy = updates.isCompleted ? (completedBy || updates.completedBy || current.completedBy) : undefined;
+    }
+    await this.pool.query(
+      `UPDATE todos SET title=$1, description=$2, assigned_to=$3, priority=$4, due_date=$5, is_completed=$6, completed_at=$7, completed_by=$8, category=$9 WHERE id=$10`,
+      [
+        merged.title,
+        merged.description || null,
+        merged.assignedTo || null,
+        merged.priority,
+        merged.dueDate || null,
+        merged.isCompleted,
+        merged.completedAt || null,
+        merged.completedBy || null,
+        merged.category,
+        id,
+      ]
+    );
+    return merged;
+  }
+
+  async deleteTodo(id: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM todos WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  // ── Couple Notes ──
+  async getCoupleNotes(): Promise<CoupleNote[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM couple_notes ORDER BY is_pinned DESC, updated_at DESC');
+    return res.rows.map(r => this.rowToNote(r));
+  }
+
+  async addCoupleNote(note: Omit<CoupleNote, 'id' | 'createdAt' | 'updatedAt' | 'isPinned'>): Promise<CoupleNote> {
+    await this.ensureReady();
+    const id = genId('note');
+    const now = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO couple_notes (id, title, content, category, color, is_pinned, author, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [id, note.title, note.content, note.category || 'General', note.color || 'zinc', false, note.author, now, now]
+    );
+    return { ...note, id, isPinned: false, createdAt: now, updatedAt: now };
+  }
+
+  async updateCoupleNote(id: string, updates: Partial<CoupleNote>): Promise<CoupleNote | null> {
+    await this.ensureReady();
+    const curRes = await this.pool.query('SELECT * FROM couple_notes WHERE id = $1', [id]);
+    if (curRes.rows.length === 0) return null;
+    const current = this.rowToNote(curRes.rows[0]);
+    const merged: CoupleNote = { ...current, ...updates, updatedAt: new Date().toISOString() };
+    await this.pool.query(
+      `UPDATE couple_notes SET title=$1, content=$2, category=$3, color=$4, is_pinned=$5, updated_at=$6 WHERE id=$7`,
+      [merged.title, merged.content, merged.category, merged.color, merged.isPinned, merged.updatedAt, id]
+    );
+    return merged;
+  }
+
+  async toggleNotePin(id: string, isPinned: boolean): Promise<CoupleNote | null> {
+    await this.ensureReady();
+    const now = new Date().toISOString();
+    const res = await this.pool.query(
+      'UPDATE couple_notes SET is_pinned = $1, updated_at = $2 WHERE id = $3 RETURNING *',
+      [isPinned, now, id]
+    );
+    if (res.rows.length === 0) return null;
+    return this.rowToNote(res.rows[0]);
+  }
+
+  async deleteCoupleNote(id: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM couple_notes WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  // ── Wish Goals ──
+  async getWishGoals(): Promise<WishGoal[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM wish_goals ORDER BY created_at DESC');
+    return res.rows.map(r => this.rowToGoal(r));
+  }
+
+  async addWishGoal(goal: Omit<WishGoal, 'id' | 'createdAt' | 'isCompleted' | 'currentAmount'>): Promise<WishGoal> {
+    await this.ensureReady();
+    const id = genId('goal');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO wish_goals (id, title, target_amount, current_amount, category, icon, target_date, is_completed, completed_at, is_shared, owner, priority, notes, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        id,
+        goal.title,
+        goal.targetAmount,
+        0,
+        goal.category,
+        goal.icon || null,
+        goal.targetDate || null,
+        false,
+        null,
+        goal.isShared !== undefined ? goal.isShared : true,
+        goal.owner,
+        goal.priority || 'MEDIUM',
+        goal.notes || null,
+        createdAt,
+      ]
+    );
+    return { ...goal, id, currentAmount: 0, isCompleted: false, createdAt };
+  }
+
+  async updateWishGoal(id: string, updates: Partial<WishGoal>): Promise<WishGoal | null> {
+    await this.ensureReady();
+    const curRes = await this.pool.query('SELECT * FROM wish_goals WHERE id = $1', [id]);
+    if (curRes.rows.length === 0) return null;
+    const current = this.rowToGoal(curRes.rows[0]);
+    const merged: WishGoal = { ...current, ...updates };
+    if (updates.isCompleted !== undefined) {
+      merged.isCompleted = updates.isCompleted;
+      merged.completedAt = updates.isCompleted ? new Date().toISOString() : undefined;
+    }
+    await this.pool.query(
+      `UPDATE wish_goals SET title=$1, target_amount=$2, current_amount=$3, category=$4, icon=$5, target_date=$6, is_completed=$7, completed_at=$8, is_shared=$9, priority=$10, notes=$11 WHERE id=$12`,
+      [
+        merged.title,
+        merged.targetAmount,
+        merged.currentAmount,
+        merged.category,
+        merged.icon || null,
+        merged.targetDate || null,
+        merged.isCompleted,
+        merged.completedAt || null,
+        merged.isShared,
+        merged.priority,
+        merged.notes || null,
+        id,
+      ]
+    );
+    return merged;
+  }
+
+  async deleteWishGoal(id: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM wish_goals WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  // ── Important Dates ──
+  async getImportantDates(): Promise<ImportantDate[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM important_dates ORDER BY date ASC');
+    return res.rows.map(r => this.rowToDate(r));
+  }
+
+  async addImportantDate(date: Omit<ImportantDate, 'id' | 'createdAt'>): Promise<ImportantDate> {
+    await this.ensureReady();
+    const id = genId('date');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO important_dates (id, title, date, type, is_recurring_yearly, notes, reminder_days_before, icon, color, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        id,
+        date.title,
+        date.date,
+        date.type || 'EVENT',
+        date.isRecurringYearly !== undefined ? date.isRecurringYearly : false,
+        date.notes || null,
+        date.reminderDaysBefore !== undefined ? date.reminderDaysBefore : 1,
+        date.icon || null,
+        date.color || 'indigo',
+        date.createdBy,
+        createdAt,
+      ]
+    );
+    return { ...date, id, createdAt };
+  }
+
+  async updateImportantDate(id: string, updates: Partial<ImportantDate>): Promise<ImportantDate | null> {
+    await this.ensureReady();
+    const curRes = await this.pool.query('SELECT * FROM important_dates WHERE id = $1', [id]);
+    if (curRes.rows.length === 0) return null;
+    const current = this.rowToDate(curRes.rows[0]);
+    const merged: ImportantDate = { ...current, ...updates };
+    await this.pool.query(
+      `UPDATE important_dates SET title=$1, date=$2, type=$3, is_recurring_yearly=$4, notes=$5, reminder_days_before=$6, icon=$7, color=$8 WHERE id=$9`,
+      [
+        merged.title,
+        merged.date,
+        merged.type,
+        merged.isRecurringYearly,
+        merged.notes || null,
+        merged.reminderDaysBefore !== undefined ? merged.reminderDaysBefore : 1,
+        merged.icon || null,
+        merged.color || 'indigo',
+        id,
+      ]
+    );
+    return merged;
+  }
+
+  async deleteImportantDate(id: string): Promise<boolean> {
+    await this.ensureReady();
+    const res = await this.pool.query('DELETE FROM important_dates WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -634,7 +1096,7 @@ class LocalFileDB {
   private load(): StoreData {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     if (!fs.existsSync(DATA_FILE)) {
-      const initialStore = {
+      const initialStore: StoreData = {
         settings: { ...DEFAULT_SETTINGS },
         transactions: seedTransactions(),
         budgets: [...DEFAULT_BUDGETS],
@@ -642,6 +1104,11 @@ class LocalFileDB {
         recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
         cycleLogs: [],
         cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
+        groceryItems: [],
+        todos: [],
+        coupleNotes: [],
+        wishGoals: [],
+        importantDates: [],
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initialStore, null, 2));
       return initialStore;
@@ -657,10 +1124,15 @@ class LocalFileDB {
         recurringExpenses: Array.isArray(parsed.recurringExpenses) ? parsed.recurringExpenses : [...DEFAULT_RECURRING_EXPENSES],
         cycleLogs: Array.isArray(parsed.cycleLogs) ? parsed.cycleLogs : [],
         cycleSettings: parsed.cycleSettings ? { ...DEFAULT_CYCLE_SETTINGS, ...parsed.cycleSettings } : { ...DEFAULT_CYCLE_SETTINGS },
+        groceryItems: Array.isArray(parsed.groceryItems) ? parsed.groceryItems : [],
+        todos: Array.isArray(parsed.todos) ? parsed.todos : [],
+        coupleNotes: Array.isArray(parsed.coupleNotes) ? parsed.coupleNotes : [],
+        wishGoals: Array.isArray(parsed.wishGoals) ? parsed.wishGoals : [],
+        importantDates: Array.isArray(parsed.importantDates) ? parsed.importantDates : [],
       };
     } catch (err) {
       console.error('[LocalFileDB] Failed to read store.json; using defaults:', err);
-      const fallbackStore = {
+      const fallbackStore: StoreData = {
         settings: { ...DEFAULT_SETTINGS },
         transactions: seedTransactions(),
         budgets: [...DEFAULT_BUDGETS],
@@ -668,6 +1140,11 @@ class LocalFileDB {
         recurringExpenses: [...DEFAULT_RECURRING_EXPENSES],
         cycleLogs: [],
         cycleSettings: { ...DEFAULT_CYCLE_SETTINGS },
+        groceryItems: [],
+        todos: [],
+        coupleNotes: [],
+        wishGoals: [],
+        importantDates: [],
       };
       fs.writeFileSync(DATA_FILE, JSON.stringify(fallbackStore, null, 2));
       return fallbackStore;
@@ -930,6 +1407,223 @@ class LocalFileDB {
     this.store.cycleSettings = { ...DEFAULT_CYCLE_SETTINGS, ...(this.store.cycleSettings || {}), ...newSettings };
     this.save();
     return this.store.cycleSettings;
+  }
+
+  // ── Grocery Items ──
+  async getGroceryItems(): Promise<GroceryItem[]> {
+    return [...(this.store.groceryItems || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async addGroceryItem(item: Omit<GroceryItem, 'id' | 'createdAt' | 'isChecked'>): Promise<GroceryItem> {
+    if (!this.store.groceryItems) this.store.groceryItems = [];
+    const id = genId('groc');
+    const createdAt = new Date().toISOString();
+    const newItem: GroceryItem = { ...item, id, isChecked: false, createdAt };
+    this.store.groceryItems.unshift(newItem);
+    this.save();
+    return newItem;
+  }
+
+  async toggleGroceryItem(id: string, isChecked: boolean, checkedBy?: string): Promise<GroceryItem | null> {
+    if (!this.store.groceryItems) this.store.groceryItems = [];
+    const idx = this.store.groceryItems.findIndex(i => i.id === id);
+    if (idx === -1) return null;
+    this.store.groceryItems[idx].isChecked = isChecked;
+    this.store.groceryItems[idx].checkedAt = isChecked ? new Date().toISOString() : undefined;
+    this.store.groceryItems[idx].checkedBy = isChecked ? checkedBy : undefined;
+    this.save();
+    return this.store.groceryItems[idx];
+  }
+
+  async deleteGroceryItem(id: string): Promise<boolean> {
+    if (!this.store.groceryItems) return false;
+    const before = this.store.groceryItems.length;
+    this.store.groceryItems = this.store.groceryItems.filter(i => i.id !== id);
+    const deleted = this.store.groceryItems.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async clearCheckedGroceryItems(): Promise<boolean> {
+    if (!this.store.groceryItems) return true;
+    this.store.groceryItems = this.store.groceryItems.filter(i => !i.isChecked);
+    this.save();
+    return true;
+  }
+
+  // ── Todos & Chores ──
+  async getTodos(): Promise<TodoItem[]> {
+    return [...(this.store.todos || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async addTodo(item: Omit<TodoItem, 'id' | 'createdAt' | 'isCompleted'>): Promise<TodoItem> {
+    if (!this.store.todos) this.store.todos = [];
+    const id = genId('todo');
+    const createdAt = new Date().toISOString();
+    const newItem: TodoItem = { ...item, id, isCompleted: false, createdAt };
+    this.store.todos.unshift(newItem);
+    this.save();
+    return newItem;
+  }
+
+  async updateTodo(id: string, updates: Partial<TodoItem>, completedBy?: string): Promise<TodoItem | null> {
+    if (!this.store.todos) this.store.todos = [];
+    const idx = this.store.todos.findIndex(t => t.id === id);
+    if (idx === -1) return null;
+    const current = this.store.todos[idx];
+    const isCompleted = updates.isCompleted !== undefined ? updates.isCompleted : current.isCompleted;
+    const completedAt = updates.isCompleted !== undefined ? (updates.isCompleted ? new Date().toISOString() : undefined) : current.completedAt;
+    const completedByVal = updates.isCompleted !== undefined ? (updates.isCompleted ? (completedBy || updates.completedBy || current.completedBy) : undefined) : current.completedBy;
+    const updated: TodoItem = {
+      ...current,
+      ...updates,
+      isCompleted,
+      completedAt,
+      completedBy: completedByVal,
+    };
+    this.store.todos[idx] = updated;
+    this.save();
+    return updated;
+  }
+
+  async deleteTodo(id: string): Promise<boolean> {
+    if (!this.store.todos) return false;
+    const before = this.store.todos.length;
+    this.store.todos = this.store.todos.filter(t => t.id !== id);
+    const deleted = this.store.todos.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  // ── Couple Notes ──
+  async getCoupleNotes(): Promise<CoupleNote[]> {
+    return [...(this.store.coupleNotes || [])].sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      return b.updatedAt.localeCompare(a.updatedAt);
+    });
+  }
+
+  async addCoupleNote(note: Omit<CoupleNote, 'id' | 'createdAt' | 'updatedAt' | 'isPinned'>): Promise<CoupleNote> {
+    if (!this.store.coupleNotes) this.store.coupleNotes = [];
+    const id = genId('note');
+    const now = new Date().toISOString();
+    const newNote: CoupleNote = { ...note, id, isPinned: false, createdAt: now, updatedAt: now };
+    this.store.coupleNotes.unshift(newNote);
+    this.save();
+    return newNote;
+  }
+
+  async updateCoupleNote(id: string, updates: Partial<CoupleNote>): Promise<CoupleNote | null> {
+    if (!this.store.coupleNotes) this.store.coupleNotes = [];
+    const idx = this.store.coupleNotes.findIndex(n => n.id === id);
+    if (idx === -1) return null;
+    const updated: CoupleNote = { ...this.store.coupleNotes[idx], ...updates, updatedAt: new Date().toISOString() };
+    this.store.coupleNotes[idx] = updated;
+    this.save();
+    return updated;
+  }
+
+  async toggleNotePin(id: string, isPinned: boolean): Promise<CoupleNote | null> {
+    if (!this.store.coupleNotes) this.store.coupleNotes = [];
+    const idx = this.store.coupleNotes.findIndex(n => n.id === id);
+    if (idx === -1) return null;
+    this.store.coupleNotes[idx].isPinned = isPinned;
+    this.store.coupleNotes[idx].updatedAt = new Date().toISOString();
+    this.save();
+    return this.store.coupleNotes[idx];
+  }
+
+  async deleteCoupleNote(id: string): Promise<boolean> {
+    if (!this.store.coupleNotes) return false;
+    const before = this.store.coupleNotes.length;
+    this.store.coupleNotes = this.store.coupleNotes.filter(n => n.id !== id);
+    const deleted = this.store.coupleNotes.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  // ── Wish Goals ──
+  async getWishGoals(): Promise<WishGoal[]> {
+    return [...(this.store.wishGoals || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async addWishGoal(goal: Omit<WishGoal, 'id' | 'createdAt' | 'isCompleted' | 'currentAmount'>): Promise<WishGoal> {
+    if (!this.store.wishGoals) this.store.wishGoals = [];
+    const id = genId('goal');
+    const createdAt = new Date().toISOString();
+    const newGoal: WishGoal = {
+      ...goal,
+      id,
+      currentAmount: 0,
+      isCompleted: false,
+      isShared: goal.isShared !== undefined ? goal.isShared : true,
+      createdAt,
+    };
+    this.store.wishGoals.unshift(newGoal);
+    this.save();
+    return newGoal;
+  }
+
+  async updateWishGoal(id: string, updates: Partial<WishGoal>): Promise<WishGoal | null> {
+    if (!this.store.wishGoals) this.store.wishGoals = [];
+    const idx = this.store.wishGoals.findIndex(g => g.id === id);
+    if (idx === -1) return null;
+    const cur = this.store.wishGoals[idx];
+    const isCompleted = updates.isCompleted !== undefined ? updates.isCompleted : cur.isCompleted;
+    const completedAt = updates.isCompleted !== undefined ? (updates.isCompleted ? new Date().toISOString() : undefined) : cur.completedAt;
+    const updated: WishGoal = { ...cur, ...updates, isCompleted, completedAt };
+    this.store.wishGoals[idx] = updated;
+    this.save();
+    return updated;
+  }
+
+  async deleteWishGoal(id: string): Promise<boolean> {
+    if (!this.store.wishGoals) return false;
+    const before = this.store.wishGoals.length;
+    this.store.wishGoals = this.store.wishGoals.filter(g => g.id !== id);
+    const deleted = this.store.wishGoals.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  // ── Important Dates ──
+  async getImportantDates(): Promise<ImportantDate[]> {
+    return [...(this.store.importantDates || [])].sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async addImportantDate(date: Omit<ImportantDate, 'id' | 'createdAt'>): Promise<ImportantDate> {
+    if (!this.store.importantDates) this.store.importantDates = [];
+    const id = genId('date');
+    const createdAt = new Date().toISOString();
+    const newDate: ImportantDate = {
+      ...date,
+      id,
+      isRecurringYearly: date.isRecurringYearly !== undefined ? date.isRecurringYearly : false,
+      reminderDaysBefore: date.reminderDaysBefore !== undefined ? date.reminderDaysBefore : 1,
+      createdAt,
+    };
+    this.store.importantDates.push(newDate);
+    this.save();
+    return newDate;
+  }
+
+  async updateImportantDate(id: string, updates: Partial<ImportantDate>): Promise<ImportantDate | null> {
+    if (!this.store.importantDates) this.store.importantDates = [];
+    const idx = this.store.importantDates.findIndex(d => d.id === id);
+    if (idx === -1) return null;
+    const updated: ImportantDate = { ...this.store.importantDates[idx], ...updates };
+    this.store.importantDates[idx] = updated;
+    this.save();
+    return updated;
+  }
+
+  async deleteImportantDate(id: string): Promise<boolean> {
+    if (!this.store.importantDates) return false;
+    const before = this.store.importantDates.length;
+    this.store.importantDates = this.store.importantDates.filter(d => d.id !== id);
+    const deleted = this.store.importantDates.length !== before;
+    if (deleted) this.save();
+    return deleted;
   }
 }
 
