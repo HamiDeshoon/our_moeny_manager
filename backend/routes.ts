@@ -6,8 +6,8 @@ import { APP_VERSION, MIN_TRANSACTION_AMOUNT_TOMAN } from '../src/types.js';
 import { sendDueReminders } from './jobs/sendReminders.js';
 import { getCalendarPhase } from '../src/features/cycle/cycleMath.js';
 
-const AUTH_HAMID_HASH = process.env.AUTH_HAMID_HASH || '$2b$12$7JQHxKj.SX3Wt0TxJRgaKerG2MFGMBf3K7PBp.VJuWvYtpZnGSGtS';
-const AUTH_FATI_HASH  = process.env.AUTH_FATI_HASH  || '$2b$12$nNwuvHvUm6MKLEBRIBEJfeaiqkHnZPFRm4dR9oR6GUn1mX7UfmHfW';
+const AUTH_HAMID_HASH = process.env.AUTH_HAMID_HASH || '$2b$12$sjGiXdc5bRkPFJmSb8V0qOob9jQvmuOoMIvUiCmPAmKHCFc7PPJQW';
+const AUTH_FATI_HASH  = process.env.AUTH_FATI_HASH  || '$2b$12$xRsMeQJNuUbyiyRnk8NhQ.oS5Mz4xdjGdPhuoqfB4JcNUbA9F6bRS';
 if (!process.env.AUTH_HAMID_HASH) console.warn('[SECURITY] AUTH_HAMID_HASH not set — using dev default!');
 
 export const apiRouter = Router();
