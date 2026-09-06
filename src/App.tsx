@@ -102,7 +102,7 @@ export default function App() {
     try {
       const [st, tx, sm, bg, bl, cl, cs] = await Promise.all([
         api.getSettings().catch(() => DEFAULT_SETTINGS),
-        api.getTransactions({ month: selectedMonth }).catch(() => []),
+        api.getTransactions(selectedMonth).catch(() => []),
         api.getHouseholdSummary(selectedMonth).catch(() => DEFAULT_SUMMARY),
         api.getBudgets().catch(() => []),
         api.getBills().catch(() => []),

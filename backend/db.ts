@@ -1702,11 +1702,45 @@ class LocalFileDB {
     const deleted = this.store.importantDates.length !== before;
     if (deleted) this.save();
     return deleted;
-=======
+  }
+
+  async upsertPushSubscription(userName: string, subscription: PushSubscriptionInput): Promise<void> {
+    this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => item.endpoint !== subscription.endpoint);
+    this.store.pushSubscriptions.push({ ...subscription, userName, updatedAt: new Date().toISOString() });
+    this.save();
+  }
+
+  async deletePushSubscription(userName: string, endpoint: string): Promise<void> {
+    this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => !(item.endpoint === endpoint && item.userName === userName));
+    this.save();
+  }
+
+  async getPushSubscriptions(): Promise<StoredPushSubscription[]> {
+    return [...this.store.pushSubscriptions];
+  }
+
+  async getNotificationPreferences(userName: string): Promise<NotificationPreferences> {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(this.store.notificationPreferences[userName] || {}) };
+  }
+
+  async updateNotificationPreferences(userName: string, preferences: Partial<NotificationPreferences>): Promise<NotificationPreferences> {
+    const merged = { ...(await this.getNotificationPreferences(userName)), ...preferences };
+    this.store.notificationPreferences[userName] = merged;
+    this.save();
+    return merged;
+  }
+
+  async claimNotificationDelivery(deliveryKey: string): Promise<boolean> {
+    if (this.store.notificationDeliveries.includes(deliveryKey)) return false;
+    this.store.notificationDeliveries.push(deliveryKey);
+    this.store.notificationDeliveries = this.store.notificationDeliveries.slice(-1000);
+    this.save();
+    return true;
+  }
+
   async removePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
     this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => item.endpoint !== endpoint);
     this.save();
->>>>>>> 3a5d06e2f073f41e85b97ba11cd8f9e66bf1661c
   }
 }
 
