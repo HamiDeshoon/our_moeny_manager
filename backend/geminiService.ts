@@ -205,14 +205,19 @@ function validateSheetResult(data: AIParsedSheetResult): string | null {
 // Voice Memo Parser
 // ──────────────────────────────────────────────
 
-function cleanAudioDataUrl(audioBase64: string): string {
-  return audioBase64.replace(/^data:(audio|video)\/[^;]+(?:;codecs=[^;]+)?;base64,/i, '');
-}
+  function cleanAudioDataUrl(audioBase64: string): string {
+  const commaIndex = audioBase64.indexOf(',');
+  return audioBase64.trim().startsWith('data:') && commaIndex >= 0
+    ? audioBase64.slice(commaIndex + 1).replace(/\s/g, '')
+    : audioBase64.replace(/\s/g, '');
+  }
 
-function normalizeAudioMimeType(mimeType?: string): string {
+  function normalizeAudioMimeType(mimeType?: string): string {
   const cleanType = (mimeType || 'audio/webm').split(';')[0].trim().toLowerCase();
+  if (cleanType === 'audio/x-m4a' || cleanType === 'audio/m4a') return 'audio/mp4';
+  if (cleanType === 'audio/x-wav') return 'audio/wav';
   return cleanType || 'audio/webm';
-}
+  }
 
 export async function parseVoiceMemo(
   input: string | { audioBase64: string; mimeType: string; speechLang?: string },

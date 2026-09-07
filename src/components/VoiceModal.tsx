@@ -85,9 +85,10 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
 
       recorder.onstop = () => {
         setIsListening(false);
-        const audioMimeType = recorder.mimeType || options?.mimeType || 'audio/webm';
+        const audioMimeType = (recorder.mimeType || options?.mimeType || 'audio/webm').split(';')[0].toLowerCase();
         const audioBlob = new Blob(audioChunksRef.current, { type: audioMimeType });
         stream.getTracks().forEach((track) => track.stop());
+        mediaRecorderRef.current = null;
 
         if (audioBlob.size === 0) {
           setError('صدایی ضبط نشد. لطفا دوباره تلاش کنید یا متن را تایپ کنید.');
