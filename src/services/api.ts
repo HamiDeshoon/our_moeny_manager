@@ -70,10 +70,18 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
     headers['x-auth-user'] = authUser;
   }
 
-  const res = await fetch(`${API_BASE}${url}`, {
-    ...options,
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${url}`, {
+      ...options,
+      headers,
+      signal: options.signal ?? AbortSignal.timeout(15000),
+    });
+  } catch (error) {
+    throw new Error(error instanceof DOMException && error.name === 'TimeoutError'
+      ? 'درخواست بیش از حد طول کشید. اتصال Neon را بررسی کنید و دوباره تلاش کنید.'
+      : 'اتصال به سرور برقرار نشد. دوباره تلاش کنید.');
+  }
 
   const contentType = res.headers.get('content-type') || '';
   if (!contentType.includes('application/json')) {

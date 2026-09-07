@@ -43,9 +43,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3 gap-2 rtl:space-x-reverse">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-400 text-xl font-bold text-[#071311] shadow-lg shadow-emerald-400/20">
-              ⚡
-            </div>
+            <img src="/duospend-logo.png" alt="DuoSpend" className="h-10 w-10 shrink-0 rounded-2xl object-cover shadow-lg shadow-emerald-400/20" />
             <div className="hidden sm:block">
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">

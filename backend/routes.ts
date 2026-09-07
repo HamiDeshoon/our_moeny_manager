@@ -12,6 +12,16 @@ if (!process.env.AUTH_HAMID_HASH) console.warn('[SECURITY] AUTH_HAMID_HASH not s
 
 export const apiRouter = Router();
 
+function publicError(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    if (/database|neon|postgres|connection|timeout|migration/i.test(error.message)) {
+      return 'اتصال پایگاه داده برقرار نشد. دوباره تلاش کنید.';
+    }
+    return error.message;
+  }
+  return fallback;
+}
+
 // --- AUTH MIDDLEWARE ---
 // Token-based auth. The frontend stores the user object in localStorage
 // after login. We check a header "x-auth-user" containing the username.
@@ -86,7 +96,7 @@ apiRouter.get('/settings', async (req, res) => {
       gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || '',
       minTransactionAmount: MIN_TRANSACTION_AMOUNT_TOMAN,
     });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/settings', async (req, res) => {
@@ -109,14 +119,14 @@ apiRouter.post('/transactions/process-recurring', async (req, res) => {
     const month = req.body.month || new Date().toISOString().substring(0, 7);
     const added = await db.processRecurringExpenses(month);
     res.json({ success: true, month, addedCount: added.length, added });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.get('/transactions', async (req, res) => {
   try {
     const month = req.query.month as string | undefined;
     res.json(await db.getTransactions(month));
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 function isBelowMinTransactionAmount(tx: any): boolean {
@@ -161,7 +171,7 @@ apiRouter.delete('/transactions/:id', async (req, res) => {
     const success = await db.deleteTransaction(req.params.id);
     if (!success) return res.status(404).json({ error: 'Transaction not found' });
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- HOUSEHOLD / SETTLEMENT SUMMARY ---
@@ -169,7 +179,7 @@ apiRouter.get(['/household/summary', '/settlements/summary'], async (req, res) =
   try {
     const month = req.query.month as string | undefined;
     res.json(await db.calculateHouseholdSummary(month));
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- BUDGETS ---
@@ -199,7 +209,7 @@ apiRouter.patch('/recurring-expenses/:id/toggle-active', async (req, res) => {
     const updated = await db.toggleRecurringExpenseActive(req.params.id, Boolean(req.body.isActive));
     if (!updated) return res.status(404).json({ error: 'Recurring expense not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/recurring-expenses/:id', async (req, res) => {
@@ -207,7 +217,7 @@ apiRouter.delete('/recurring-expenses/:id', async (req, res) => {
     const success = await db.deleteRecurringExpense(req.params.id);
     if (!success) return res.status(404).json({ error: 'Recurring expense not found' });
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- BILLS ---
@@ -226,7 +236,7 @@ apiRouter.patch('/bills/:id/toggle-paid', async (req, res) => {
     const updated = await db.toggleBillPaid(req.params.id, Boolean(req.body.isPaid));
     if (!updated) return res.status(404).json({ error: 'Bill not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/bills/:id', async (req, res) => {
@@ -234,7 +244,7 @@ apiRouter.delete('/bills/:id', async (req, res) => {
     const success = await db.deleteBill(req.params.id);
     if (!success) return res.status(404).json({ error: 'Bill not found' });
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- GEMINI AI ENDPOINTS ---
@@ -367,7 +377,7 @@ apiRouter.get('/analytics/three-months', async (req, res) => {
   try {
     const month = req.query.month as string | undefined;
     res.json(await db.getThreeMonthTrends(month));
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- CYCLE & PERIOD TRACKER ---
@@ -375,7 +385,7 @@ apiRouter.get('/cycle/logs', async (_req, res) => {
   try {
     const logs = await db.getCycleLogs();
     res.json(logs);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/cycle/logs', async (req, res) => {
@@ -384,7 +394,7 @@ apiRouter.post('/cycle/logs', async (req, res) => {
     if (!log || !log.date) return res.status(400).json({ error: 'Date is required for cycle log' });
     const saved = await db.saveCycleLog(log);
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/cycle/logs/:date', async (req, res) => {
@@ -392,14 +402,14 @@ apiRouter.delete('/cycle/logs/:date', async (req, res) => {
     const { date } = req.params;
     const success = await db.deleteCycleLog(date);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.get('/cycle/settings', async (_req, res) => {
   try {
     const settings = await db.getCycleSettings();
     res.json(settings);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/cycle/settings', async (req, res) => {
@@ -407,7 +417,7 @@ apiRouter.post('/cycle/settings', async (req, res) => {
     const newSettings = req.body;
     const updated = await db.updateCycleSettings(newSettings);
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- PUSH REMINDERS ---
@@ -428,7 +438,7 @@ apiRouter.put('/push/preferences', async (req: any, res) => {
     if (input.dailyLogTime && !/^\d{2}:\d{2}$/.test(input.dailyLogTime)) return res.status(400).json({ error: 'dailyLogTime must be HH:mm' });
     if (input.timezone && typeof input.timezone !== 'string') return res.status(400).json({ error: 'timezone must be a string' });
     res.json(await db.updateNotificationPreferences(req.authUser, input));
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/push/subscriptions', async (req: any, res) => {
@@ -437,7 +447,7 @@ apiRouter.post('/push/subscriptions', async (req: any, res) => {
     if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) return res.status(400).json({ error: 'A valid push subscription is required.' });
     await db.upsertPushSubscription(req.authUser, subscription);
     res.status(201).json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/push/subscriptions', async (req: any, res) => {
@@ -445,7 +455,7 @@ apiRouter.delete('/push/subscriptions', async (req: any, res) => {
     if (!req.body?.endpoint) return res.status(400).json({ error: 'Subscription endpoint is required.' });
     await db.deletePushSubscription(req.authUser, req.body.endpoint);
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // ──────────────────────────────────────────────
@@ -456,7 +466,7 @@ apiRouter.delete('/push/subscriptions', async (req: any, res) => {
 apiRouter.get('/grocery', async (_req, res) => {
   try {
     res.json(await db.getGroceryItems());
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/grocery', async (req: any, res) => {
@@ -466,7 +476,7 @@ apiRouter.post('/grocery', async (req: any, res) => {
     const addedBy = req.authUser || item.addedBy || 'partner_a';
     const saved = await db.addGroceryItem({ ...item, addedBy });
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.patch('/grocery/:id/toggle', async (req: any, res) => {
@@ -476,14 +486,14 @@ apiRouter.patch('/grocery/:id/toggle', async (req: any, res) => {
     const updated = await db.toggleGroceryItem(id, Boolean(isChecked), req.authUser);
     if (!updated) return res.status(404).json({ error: 'Item not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/grocery/checked/clear', async (_req, res) => {
   try {
     await db.clearCheckedGroceryItems();
     res.json({ success: true });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/grocery/:id', async (req, res) => {
@@ -491,14 +501,14 @@ apiRouter.delete('/grocery/:id', async (req, res) => {
     const { id } = req.params;
     const success = await db.deleteGroceryItem(id);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // Todos
 apiRouter.get('/todos', async (_req, res) => {
   try {
     res.json(await db.getTodos());
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/todos', async (req: any, res) => {
@@ -508,7 +518,7 @@ apiRouter.post('/todos', async (req: any, res) => {
     const createdBy = req.authUser || item.createdBy || 'partner_a';
     const saved = await db.addTodo({ ...item, createdBy });
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.patch('/todos/:id', async (req: any, res) => {
@@ -518,7 +528,7 @@ apiRouter.patch('/todos/:id', async (req: any, res) => {
     const updated = await db.updateTodo(id, updates, req.authUser);
     if (!updated) return res.status(404).json({ error: 'Todo not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/todos/:id', async (req, res) => {
@@ -526,14 +536,14 @@ apiRouter.delete('/todos/:id', async (req, res) => {
     const { id } = req.params;
     const success = await db.deleteTodo(id);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // Notes
 apiRouter.get('/notes', async (_req, res) => {
   try {
     res.json(await db.getCoupleNotes());
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/notes', async (req: any, res) => {
@@ -543,7 +553,7 @@ apiRouter.post('/notes', async (req: any, res) => {
     const author = req.authUser || note.author || 'partner_a';
     const saved = await db.addCoupleNote({ ...note, author });
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.put('/notes/:id', async (req, res) => {
@@ -553,7 +563,7 @@ apiRouter.put('/notes/:id', async (req, res) => {
     const updated = await db.updateCoupleNote(id, updates);
     if (!updated) return res.status(404).json({ error: 'Note not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.patch('/notes/:id/pin', async (req, res) => {
@@ -563,7 +573,7 @@ apiRouter.patch('/notes/:id/pin', async (req, res) => {
     const updated = await db.toggleNotePin(id, Boolean(isPinned));
     if (!updated) return res.status(404).json({ error: 'Note not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/notes/:id', async (req, res) => {
@@ -571,14 +581,14 @@ apiRouter.delete('/notes/:id', async (req, res) => {
     const { id } = req.params;
     const success = await db.deleteCoupleNote(id);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // Goals
 apiRouter.get('/goals', async (_req, res) => {
   try {
     res.json(await db.getWishGoals());
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/goals', async (req: any, res) => {
@@ -588,7 +598,7 @@ apiRouter.post('/goals', async (req: any, res) => {
     const owner = req.authUser || goal.owner || 'partner_a';
     const saved = await db.addWishGoal({ ...goal, owner });
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.patch('/goals/:id', async (req, res) => {
@@ -598,7 +608,7 @@ apiRouter.patch('/goals/:id', async (req, res) => {
     const updated = await db.updateWishGoal(id, updates);
     if (!updated) return res.status(404).json({ error: 'Goal not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/goals/:id', async (req, res) => {
@@ -606,14 +616,14 @@ apiRouter.delete('/goals/:id', async (req, res) => {
     const { id } = req.params;
     const success = await db.deleteWishGoal(id);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // Important Dates
 apiRouter.get('/dates', async (_req, res) => {
   try {
     res.json(await db.getImportantDates());
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/dates', async (req: any, res) => {
@@ -623,7 +633,7 @@ apiRouter.post('/dates', async (req: any, res) => {
     const createdBy = req.authUser || date.createdBy || 'partner_a';
     const saved = await db.addImportantDate({ ...date, createdBy });
     res.json(saved);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.put('/dates/:id', async (req, res) => {
@@ -633,7 +643,7 @@ apiRouter.put('/dates/:id', async (req, res) => {
     const updated = await db.updateImportantDate(id, updates);
     if (!updated) return res.status(404).json({ error: 'Date not found' });
     res.json(updated);
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.delete('/dates/:id', async (req, res) => {
@@ -641,7 +651,7 @@ apiRouter.delete('/dates/:id', async (req, res) => {
     const { id } = req.params;
     const success = await db.deleteImportantDate(id);
     res.json({ success });
-  } catch (err: any) { res.status(500).json({ error: err.message }); }
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/internal/run-reminders', async (req, res) => {

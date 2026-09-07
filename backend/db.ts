@@ -148,19 +148,23 @@ class PostgresDB {
   private ready: Promise<void>;
 
   constructor() {
-    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED;
     if (!dbUrl) {
-      console.warn('[PostgresDB] WARNING: Neither DATABASE_URL nor POSTGRES_URL environment variable was found.');
+      throw new Error('Database connection is not configured. Set DATABASE_URL or DATABASE_URL_UNPOOLED.');
     }
+    const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
     this.pool = new Pool({
       connectionString: dbUrl,
-      ssl: dbUrl && !dbUrl.includes('localhost') ? { rejectUnauthorized: false } : undefined,
+      ssl: isLocal ? undefined : { rejectUnauthorized: false },
       max: 10,
+      connectionTimeoutMillis: 10000,
       idleTimeoutMillis: 30000,
+      allowExitOnIdle: true,
     });
 
     this.ready = this.init().catch(err => {
       console.error('[PostgresDB] Initialization connection failed:', err);
+      throw new Error('Database initialization failed. Check the Neon connection and migrations.', { cause: err });
     });
   }
 
@@ -1199,7 +1203,7 @@ class PostgresDB {
   }
 }
 
-// ──────────────────────────────────────────────
+// ────��─────────────────────────────────────────
 // Local JSON Database Layer
 // ──────────────────────────────────────────────
 
