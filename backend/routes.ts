@@ -410,10 +410,12 @@ apiRouter.post('/cycle/settings', async (req, res) => {
   } catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+export const DEFAULT_VAPID_PUBLIC_KEY = 'BPqjQc9W7qdGKdua-TW_ZHq9PVgGEh7EDv9c36ox2vl6XwTopfmL_bv-dZ67l3Bue9lvg_Sg8bItzrqsFoUDuxQ';
+export const DEFAULT_VAPID_PRIVATE_KEY = 'P_UWWr8bSuD0Hj7sJBp9Xb-gdtQhgvtVMLcN0P-h5vc';
+
 // --- PUSH REMINDERS ---
 apiRouter.get('/push/public-key', (_req, res) => {
-  const key = process.env.VAPID_PUBLIC_KEY;
-  if (!key) return res.status(503).json({ error: 'Push reminders are not configured on this deployment.' });
+  const key = process.env.VAPID_PUBLIC_KEY || DEFAULT_VAPID_PUBLIC_KEY;
   res.json({ publicKey: key });
 });
 

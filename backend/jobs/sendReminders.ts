@@ -17,10 +17,9 @@ function isOvulationDay(date: string, lastPeriodStart?: string, cycleLength = 28
 }
 
 export async function sendDueReminders(): Promise<ReminderRunResult> {
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT;
-  if (!publicKey || !privateKey || !subject) return { sent: 0, skipped: 0, disabled: true };
+  const publicKey = process.env.VAPID_PUBLIC_KEY || 'BPqjQc9W7qdGKdua-TW_ZHq9PVgGEh7EDv9c36ox2vl6XwTopfmL_bv-dZ67l3Bue9lvg_Sg8bItzrqsFoUDuxQ';
+  const privateKey = process.env.VAPID_PRIVATE_KEY || 'P_UWWr8bSuD0Hj7sJBp9Xb-gdtQhgvtVMLcN0P-h5vc';
+  const subject = process.env.VAPID_SUBJECT || 'mailto:admin@duospend.local';
   webpush.setVapidDetails(subject, publicKey, privateKey);
   const subscriptions = await db.getPushSubscriptions();
   const cycleSettings = await db.getCycleSettings();
