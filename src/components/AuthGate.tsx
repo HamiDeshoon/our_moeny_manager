@@ -54,9 +54,7 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onLoginSuccess }) => {
       >
         {/* App Logo & Header */}
         <div className="text-center mb-6">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 shadow-inner shadow-indigo-500/20">
-            <span className="text-2xl">⚡</span>
-          </div>
+          <img src="/duospend-logo.png" alt="DuoSpend" className="mx-auto mb-3 h-14 w-14 rounded-2xl object-cover shadow-lg shadow-emerald-400/20" />
           <h1 className="text-2xl font-black tracking-tight text-white">DuoSpend</h1>
           <p className="mt-1 text-xs text-zinc-400 font-medium">مدیریت مالی هوشمند زوج‌ها</p>
         </div>

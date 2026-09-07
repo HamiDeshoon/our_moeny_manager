@@ -21,15 +21,15 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-4 mb-6"
+      className="mb-6 space-y-4"
     >
       {/* Metric Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {/* Total Household Spent */}
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-black/40 backdrop-blur-md border border-white/10 rounded-3xl p-5 relative overflow-hidden shadow-2xl shadow-indigo-500/10"
+          className="premium-card relative overflow-hidden p-5"
         >
           <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-indigo-500 via-sky-400 to-emerald-400 opacity-80" />
           <div className="absolute -right-12 -top-12 w-40 h-40 bg-indigo-500/20 blur-3xl rounded-full" />
@@ -83,7 +83,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-black/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group"
+          className="premium-card group relative overflow-hidden p-5"
         >
           <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20 blur-2xl transition-transform group-hover:scale-110 duration-700" style={{ backgroundColor: settings.partnerA.color }} />
           <div className="flex items-center justify-between relative z-10">
@@ -109,7 +109,7 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
         <motion.div 
           whileHover={{ y: -4, scale: 1.01 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
-          className="bg-black/30 backdrop-blur-md border border-white/5 rounded-3xl p-5 shadow-xl relative overflow-hidden group"
+          className="premium-card group relative overflow-hidden p-5"
         >
           <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-20 blur-2xl transition-transform group-hover:scale-110 duration-700" style={{ backgroundColor: settings.partnerB.color }} />
           <div className="flex items-center justify-between relative z-10">

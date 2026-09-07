@@ -38,14 +38,12 @@ export const Header: React.FC<HeaderProps> = ({
   const jalaliOptions = getJalaliMonthOptions();
 
   return (
-    <header className="bg-zinc-950/80 backdrop-blur-xl text-zinc-100 border-b border-white/5 sticky top-0 z-30 shadow-xs">
+    <header className="sticky top-0 z-30 border-b border-emerald-100/10 bg-[#071311]/90 text-zinc-100 shadow-lg shadow-black/10 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3 gap-2 rtl:space-x-reverse">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20 shrink-0">
-              ⚡
-            </div>
+            <img src="/duospend-logo.png" alt="DuoSpend" className="h-10 w-10 shrink-0 rounded-2xl object-cover shadow-lg shadow-emerald-400/20" />
             <div className="hidden sm:block">
               <div className="flex items-center space-x-2 rtl:space-x-reverse">
                 <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
@@ -70,7 +68,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Month Selector & Couple Badge */}
           <div className="flex items-center space-x-1 sm:space-x-2 rtl:space-x-reverse ml-auto">
-            <div className="flex items-center bg-black/40 border border-white/10 rounded-lg px-2 sm:px-2.5 py-1 text-xs text-zinc-300">
+            <div className="flex items-center rounded-xl border border-emerald-100/10 bg-white/[0.04] px-2 sm:px-2.5 py-1.5 text-xs text-zinc-300">
               <Calendar className="w-3.5 h-3.5 text-indigo-400 mr-1.5 rtl:mr-0 rtl:ml-1.5" />
               {settings.useJalaliDate ? (
                 <select
@@ -186,7 +184,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onTabChange('dashboard')}
               className={`px-3 sm:px-3.5 py-1.5 rounded-md font-medium whitespace-nowrap transition cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/20'
+                  ? 'bg-emerald-400/10 text-emerald-300 font-bold border border-emerald-300/20'
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               }`}
             >
