@@ -75,7 +75,7 @@ async function fetchJSON<T>(url: string, options: RequestInit = {}): Promise<T> 
     res = await fetch(`${API_BASE}${url}`, {
       ...options,
       headers,
-      signal: options.signal ?? AbortSignal.timeout(15000),
+      signal: options.signal ?? AbortSignal.timeout(60000),
     });
   } catch (error) {
     throw new Error(error instanceof DOMException && error.name === 'TimeoutError'

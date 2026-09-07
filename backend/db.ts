@@ -157,7 +157,7 @@ class PostgresDB {
       connectionString: dbUrl,
       ssl: isLocal ? undefined : { rejectUnauthorized: false },
       max: 10,
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: 30000,
       idleTimeoutMillis: 30000,
       allowExitOnIdle: true,
     });
