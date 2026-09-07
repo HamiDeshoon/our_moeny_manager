@@ -5,6 +5,7 @@ import { AppSettings } from '../types';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { NotificationPreferences } from '../features/cycle/NotificationPreferences';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -258,6 +259,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </label>
         </div>
+
+        <NotificationPreferences enabled={true} />
 
         <div className="pt-4 flex gap-3 border-t border-white/5">
           <Button type="button" variant="ghost" onClick={onClose} className="flex-1">

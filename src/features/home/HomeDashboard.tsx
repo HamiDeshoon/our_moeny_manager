@@ -27,7 +27,7 @@ export function HomeDashboard({ balances, budget, insights, onViewTransactions }
             </button>
           </section>,
           <section className="premium-card bg-[#11241f] p-4 shadow-xl shadow-black/20" key="budget">
-            <div className="mb-4 flex items-center justify-between"><h2 className="font-bold text-white">بودجه ماهانه</h2><span className="text-xs text-zinc-500">۲ از ۳</span></div>
+            <div className="mb-4 flex items-center justify-between"><h2 className="font-bold text-white">بودجه و تعهدات مالی</h2><span className="text-xs text-zinc-500">۲ از ۳</span></div>
             {budget}
           </section>,
           <section className="premium-card border-amber-300/20 bg-[#11241f] p-4 shadow-xl shadow-black/20" key="insights">

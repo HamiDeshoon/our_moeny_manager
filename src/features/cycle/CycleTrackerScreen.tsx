@@ -2,8 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, CircleHelp, HeartPulse, Settings2 } from 'lucide-react';
 import type { AppSettings, AuthUser, CycleLog, CycleSettings } from '../../types';
 import { getCalendarPhase, getLastPeriodStart, getJalaliMonthDaysGrid } from './cycleMath';
-import { CycleInsightCard } from '../insights/CycleInsightCard';
-import { NotificationPreferences } from './NotificationPreferences';
+import { DailyWellnessCard } from './DailyWellnessCard';
 import { gregorianToJalali, formatJalaliDate } from '../../utils/formatters';
 
 interface CycleTrackerScreenProps {
@@ -228,15 +227,12 @@ export function CycleTrackerScreen({
         </div>
       </section>
 
-      <CycleInsightCard
-        insights={insights}
-        consent={Boolean(cycleSettings.healthInsightsConsent)}
-        loading={insightsLoading}
-        error={insightsError}
-        onEnable={onEnableInsights}
-        onRefresh={onRefreshInsights}
+      <DailyWellnessCard
+        currentUser={currentUser}
+        cycleSettings={cycleSettings}
+        logs={logs}
+        onOpenLog={onOpenLog}
       />
-      <NotificationPreferences enabled={Boolean(currentUser)} />
       {!currentUser ? (
         <div className="flex gap-2 rounded-xl border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
           <CircleHelp className="h-4 w-4 shrink-0" />
