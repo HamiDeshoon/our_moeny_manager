@@ -1,6 +1,6 @@
 import React from 'react';
-import { Sparkles, Mic, Camera, PlusCircle, Settings, Calendar, FileSpreadsheet, Download, UserCheck, LogIn, Heart } from 'lucide-react';
-import { APP_VERSION, AppSettings, AuthUser } from '../types';
+import { Sparkles, Mic, Camera, PlusCircle, Settings, Calendar, FileSpreadsheet, Download, LogIn, Heart } from 'lucide-react';
+import { AppSettings, AuthUser } from '../types';
 import { getJalaliMonthYear, getJalaliMonthOptions } from '../utils/formatters';
 
 interface HeaderProps {
@@ -42,29 +42,9 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
-          <div className="flex items-center space-x-3 gap-2 rtl:space-x-reverse">
-            <img src="/duospend-logo.png" alt="DuoSpend" className="h-10 w-10 shrink-0 rounded-2xl object-cover shadow-lg shadow-emerald-400/20" />
-            <div className="hidden sm:block">
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <span className="font-extrabold text-lg tracking-tight text-zinc-100 flex items-center gap-1.5">
-                  DuoSpend
-                  <span className="bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-emerald-500/30">
-                    v{APP_VERSION}
-                  </span>
-                </span>
-                <span className="hidden md:inline-flex bg-indigo-500/10 text-indigo-400 text-[10px] uppercase font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-                  Couple Finance
-                </span>
-                <span title="دیتابیس ابری متصل است (PostgreSQL Cloud Sync Active)" className="hidden xl:inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  همگام‌سازی ابری (Neon PostgreSQL)
-                </span>
-              </div>
-              <p className="text-xs text-zinc-400 hidden lg:block">
-                {settings.partnerA.name} {settings.partnerA.avatar} & {settings.partnerB.name} {settings.partnerB.avatar}
-              </p>
-            </div>
-          </div>
+          <button type="button" onClick={() => onTabChange('dashboard')} aria-label="DuoSpend dashboard" className="shrink-0 rounded-2xl transition hover:opacity-80 focus-visible:outline-none">
+            <img src="/duospend-logo.png" alt="DuoSpend" className="h-10 w-10 rounded-2xl object-cover shadow-lg shadow-emerald-400/20" />
+          </button>
 
           {/* Month Selector & Couple Badge */}
           <div className="flex items-center space-x-1 sm:space-x-2 rtl:space-x-reverse ml-auto">
@@ -100,14 +80,14 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Quick Action Buttons */}
-            <div className="hidden lg:flex items-center space-x-2 rtl:space-x-reverse ml-2 rtl:ml-0 rtl:mr-2">
+            <div className="hidden lg:flex items-center space-x-1.5 rtl:space-x-reverse ml-2 rtl:ml-0 rtl:mr-2">
               <button
                 onClick={onOpenCSVImport}
                 className="flex items-center space-x-1.5 rtl:space-x-reverse bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer"
                 title="Import Excel/CSV/Sheets"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Import CSV</span>
+
               </button>
 
               <button
@@ -116,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
                 title="Export Monthly Report as CSV"
               >
                 <Download className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Export CSV</span>
+
               </button>
 
               <button
@@ -188,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               }`}
             >
-              Dashboard
+خانه
             </button>
             <button
               onClick={() => onTabChange('transactions')}
@@ -198,7 +178,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               }`}
             >
-              Transactions
+تراکنش‌ها
             </button>
             <button
               onClick={() => onTabChange('budgets')}
@@ -208,7 +188,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               }`}
             >
-              Monthly Budgets
+بودجه
             </button>
             <button
               onClick={() => onTabChange('bills')}
@@ -218,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
               }`}
             >
-              Recurring Bills
+قبوض
             </button>
             <button
               onClick={() => onTabChange('couple')}
