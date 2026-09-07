@@ -67,18 +67,7 @@ const DEFAULT_RECURRING_EXPENSES: RecurringExpense[] = [
 ];
 
 function seedTransactions(): Transaction[] {
-  const m = getCurrentMonthStr();
-  const now = new Date().toISOString();
-  return [
-    { id: 'tx-1', title: 'Hyperstar Weekly Groceries (خریدهای هایپراستار)', amount: 1850000, type: 'EXPENSE', category: 'Groceries', paidBy: 'partner_a', date: `${m}-03`, vendor: 'Hyperstar', notes: 'Fresh fruits, vegetables, dairy, and pantry items', createdAt: now },
-    { id: 'tx-2', title: 'Cafe Tehroon Date Night (شام و کافه طهرون)', amount: 780000, type: 'EXPENSE', category: 'Dining & Takeout', paidBy: 'partner_b', date: `${m}-05`, vendor: 'Cafe Tehroon', notes: 'Dinner and beverages date', createdAt: now },
-    { id: 'tx-3', title: 'Monthly Apartment Rent (اجاره ماهانه)', amount: 35000000, type: 'EXPENSE', category: 'Rent & Mortgage', paidBy: 'partner_a', date: `${m}-01`, vendor: 'Apartment Landlord', notes: 'Direct transfer for this month rent', isRecurring: true, recurringDay: 1, recurringFrequency: 'MONTHLY', createdAt: now },
-    { id: 'tx-4', title: 'Electric & Gas Utility Bill (قبوض برق و گاز)', amount: 450000, type: 'EXPENSE', category: 'Utilities & Internet', paidBy: 'partner_b', date: `${m}-08`, vendor: 'Power & Gas Authority', notes: 'Paid via mobile bank app', isRecurring: true, recurringDay: 8, recurringFrequency: 'MONTHLY', createdAt: now },
-    { id: 'tx-5', title: 'Digikala Home Supplies (خریدهای دیجی‌کالا)', amount: 1420000, type: 'EXPENSE', category: 'Household & Supplies', paidBy: 'partner_b', date: `${m}-10`, vendor: 'Digikala', notes: 'Kitchen blender and filter cartridges', createdAt: now },
-    { id: 'tx-6', title: 'Ofogh Kourosh Supermarket (افق کوروش)', amount: 640000, type: 'EXPENSE', category: 'Groceries', paidBy: 'partner_a', date: `${m}-12`, vendor: 'Ofogh Kourosh', notes: 'Cooking oil, rice, and breakfast goods', createdAt: now },
-    { id: 'tx-7', title: 'Book Garden Cinema & Books (باغ کتاب)', amount: 450000, type: 'EXPENSE', category: 'Entertainment & Subscriptions', paidBy: 'partner_b', date: `${m}-14`, vendor: 'Book Garden', notes: 'Movie tickets & novel purchase', createdAt: now },
-    { id: 'tx-8', title: 'Snapp / Tapsi Rides & Fuel (اسنپ و بنزین)', amount: 320000, type: 'EXPENSE', category: 'Travel & Transport', paidBy: 'partner_a', date: `${m}-16`, vendor: 'Snapp / Gas Station', notes: 'Commute and vehicle gas refill', createdAt: now },
-  ];
+  return [];
 }
 
 const genId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -143,7 +132,11 @@ const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   dailyLogEnabled: false,
   dailyLogTime: '20:00',
   ovulationEnabled: false,
-  timezone: 'UTC',
+  nightlyExpenseEnabled: true,
+  nightlyExpenseTime: '21:00',
+  groceryAlertsEnabled: true,
+  occasionAlertsEnabled: true,
+  timezone: 'Asia/Tehran',
 };
 
 // ──────────────────────────────────────────────
@@ -1160,6 +1153,50 @@ class PostgresDB {
     await this.ensureReady();
     await this.pool.query('DELETE FROM push_subscriptions WHERE endpoint = $1', [endpoint]);
   }
+
+  async exportBackup(): Promise<any> {
+    await this.ensureReady();
+    const settings = await this.getSettings();
+    const transactions = await this.getTransactions();
+    const budgets = await this.getBudgets();
+    const bills = await this.getBills();
+    const recurringExpenses = await this.getRecurringExpenses();
+    const cycleLogs = await this.getCycleLogs();
+    const cycleSettings = await this.getCycleSettings();
+    const groceryItems = await this.getGroceryItems();
+    const todos = await this.getTodos();
+    const coupleNotes = await this.getCoupleNotes();
+    const wishGoals = await this.getWishGoals();
+    const importantDates = await this.getImportantDates();
+    return {
+      version: '1.4.0',
+      exportedAt: new Date().toISOString(),
+      data: {
+        settings,
+        transactions,
+        budgets,
+        bills,
+        recurringExpenses,
+        cycleLogs,
+        cycleSettings,
+        groceryItems,
+        todos,
+        coupleNotes,
+        wishGoals,
+        importantDates,
+      }
+    };
+  }
+
+  async importBackup(backup: any): Promise<boolean> {
+    await this.ensureReady();
+    const data = backup?.data || backup;
+    if (!data) return false;
+    if (data.settings) await this.updateSettings(data.settings);
+    if (Array.isArray(data.budgets)) await this.updateBudgets(data.budgets);
+    if (data.cycleSettings) await this.updateCycleSettings(data.cycleSettings);
+    return true;
+  }
 }
 
 // ──────────────────────────────────────────────
@@ -1741,6 +1778,46 @@ class LocalFileDB {
   async removePushSubscriptionByEndpoint(endpoint: string): Promise<void> {
     this.store.pushSubscriptions = this.store.pushSubscriptions.filter((item) => item.endpoint !== endpoint);
     this.save();
+  }
+
+  async exportBackup(): Promise<any> {
+    return {
+      version: '1.4.0',
+      exportedAt: new Date().toISOString(),
+      data: {
+        settings: this.store.settings,
+        transactions: this.store.transactions,
+        budgets: this.store.budgets,
+        bills: this.store.bills,
+        recurringExpenses: this.store.recurringExpenses,
+        cycleLogs: this.store.cycleLogs,
+        cycleSettings: this.store.cycleSettings,
+        groceryItems: this.store.groceryItems,
+        todos: this.store.todos,
+        coupleNotes: this.store.coupleNotes,
+        wishGoals: this.store.wishGoals,
+        importantDates: this.store.importantDates,
+      }
+    };
+  }
+
+  async importBackup(backup: any): Promise<boolean> {
+    const data = backup?.data || backup;
+    if (!data) return false;
+    if (data.settings) this.store.settings = normalizeSettings(data.settings);
+    if (Array.isArray(data.transactions)) this.store.transactions = data.transactions;
+    if (Array.isArray(data.budgets)) this.store.budgets = data.budgets;
+    if (Array.isArray(data.bills)) this.store.bills = data.bills;
+    if (Array.isArray(data.recurringExpenses)) this.store.recurringExpenses = data.recurringExpenses;
+    if (Array.isArray(data.cycleLogs)) this.store.cycleLogs = data.cycleLogs;
+    if (data.cycleSettings) this.store.cycleSettings = { ...DEFAULT_CYCLE_SETTINGS, ...data.cycleSettings };
+    if (Array.isArray(data.groceryItems)) this.store.groceryItems = data.groceryItems;
+    if (Array.isArray(data.todos)) this.store.todos = data.todos;
+    if (Array.isArray(data.coupleNotes)) this.store.coupleNotes = data.coupleNotes;
+    if (Array.isArray(data.wishGoals)) this.store.wishGoals = data.wishGoals;
+    if (Array.isArray(data.importantDates)) this.store.importantDates = data.importantDates;
+    this.save();
+    return true;
   }
 }
 

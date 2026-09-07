@@ -210,6 +210,10 @@ export interface NotificationPreferences {
   dailyLogEnabled: boolean;
   dailyLogTime: string;
   ovulationEnabled: boolean;
+  nightlyExpenseEnabled?: boolean;
+  nightlyExpenseTime?: string; // e.g. "21:00"
+  groceryAlertsEnabled?: boolean;
+  occasionAlertsEnabled?: boolean;
   timezone: string;
 }
 

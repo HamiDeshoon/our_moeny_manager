@@ -167,8 +167,15 @@ html { scroll-padding-top: 112px; }
   color-scheme: dark;
 }
 
-html, body, #root { min-height: 100dvh; }
-body { background: var(--duo-canvas); overflow-x: clip; text-wrap: pretty; }
+html, body, #root {
+  min-height: 100dvh;
+  -webkit-overflow-scrolling: touch;
+}
+body {
+  background: var(--duo-canvas);
+  overflow-x: hidden;
+  text-wrap: pretty;
+}
 button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--duo-teal);
@@ -181,7 +188,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   padding-right: var(--safe-right);
   padding-left: var(--safe-left);
   padding-bottom: calc(6rem + var(--safe-bottom));
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .bottom-tab-bar {

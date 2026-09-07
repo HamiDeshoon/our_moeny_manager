@@ -247,4 +247,10 @@ export const api = {
     fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription) }),
   deletePushSubscription: (endpoint: string) =>
     fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+
+  // Backup & Google Drive Data Sync
+  exportBackup: () => fetchJSON<any>('/backup/export'),
+  importBackup: (backup: any) =>
+    fetchJSON<{ success: boolean }>('/backup/import', { method: 'POST', body: JSON.stringify(backup) }),
 };
+

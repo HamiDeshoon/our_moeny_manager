@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import {
   PieChart,
   Pie,
@@ -10,15 +10,10 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Legend,
-  ComposedChart,
-  Line,
-  Area,
 } from 'recharts';
-import { AppSettings, Budget, MonthTrendData, Transaction } from '../types';
-import { api } from '../services/api';
-import { TrendingUp, PiggyBank, Calendar, Sparkles, ShieldAlert, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { TrendSummaryCards } from './TrendSummaryCards';
+import { AppSettings, Budget, Transaction } from '../types';
+import { TrendingUp, Wallet, ArrowDownRight, Layers, PieChart as PieIcon, BarChart3 } from 'lucide-react';
+import { formatMoney } from '../utils/formatters';
 
 interface AnalyticsChartsProps {
   transactions: Transaction[];
@@ -28,395 +23,205 @@ interface AnalyticsChartsProps {
 }
 
 const COLORS = [
-  '#4f46e5', // Indigo
-  '#0284c7', // Sky blue
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#ec4899', // Pink
-  '#8b5cf6', // Purple
-  '#06b6d4', // Cyan
+  '#2dd4bf', // Teal
+  '#818cf8', // Indigo
+  '#fb7185', // Rose
+  '#fbbf24', // Amber
+  '#38bdf8', // Sky
+  '#a78bfa', // Purple
+  '#34d399', // Emerald
   '#f97316', // Orange
-  '#ef4444', // Red
-  '#64748b', // Slate
 ];
 
 export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
   transactions,
-  budgets,
   settings,
-  selectedMonth,
 }) => {
   const symbol = settings.currencySymbol || 'تومان';
-  const [threeMonthTrends, setThreeMonthTrends] = useState<MonthTrendData[]>([]);
-  const [isLoadingTrends, setIsLoadingTrends] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'current' | '3month'>('3month');
 
-  // Load 3-month trends from API
-  useEffect(() => {
-    let isMounted = true;
-    setIsLoadingTrends(true);
-    api.getThreeMonthTrends(selectedMonth)
-      .then((data) => {
-        if (isMounted) setThreeMonthTrends(data);
-      })
-      .catch((err) => console.error('Failed loading 3-month trends:', err))
-      .finally(() => {
-        if (isMounted) setIsLoadingTrends(false);
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedMonth, transactions]);
+  // 1. Filter expense transactions
+  const expenseTxs = useMemo(() => (transactions || []).filter((t) => t.type === 'EXPENSE'), [transactions]);
+  const totalExpense = useMemo(() => expenseTxs.reduce((sum, t) => sum + Number(t.amount || 0), 0), [expenseTxs]);
 
-  // Category breakdown for Donut chart (Current Month)
+  // 2. Partner comparison
+  const partnerAExpense = useMemo(
+    () => expenseTxs.filter((t) => t.paidBy === settings.partnerA.id).reduce((sum, t) => sum + Number(t.amount || 0), 0),
+    [expenseTxs, settings.partnerA.id]
+  );
+  const partnerBExpense = useMemo(
+    () => expenseTxs.filter((t) => t.paidBy === settings.partnerB.id).reduce((sum, t) => sum + Number(t.amount || 0), 0),
+    [expenseTxs, settings.partnerB.id]
+  );
+
+  // 3. Category distribution
   const categoryData = useMemo(() => {
-    const expenseTxs = (transactions || []).filter((t) => t.type === 'EXPENSE');
     const map: Record<string, number> = {};
-
     for (const t of expenseTxs) {
       map[t.category] = (map[t.category] || 0) + Number(t.amount || 0);
     }
-
     return Object.entries(map)
-      .map(([name, value]) => ({ name, value: Math.round(value * 100) / 100 }))
-      .sort((a, b) => b.value - a.value);
-  }, [transactions]);
-
-  // Partner spending comparison per category for Bar chart
-  const partnerComparisonData = useMemo(() => {
-    const expenseTxs = (transactions || []).filter((t) => t.type === 'EXPENSE');
-    const map: Record<string, { partnerA: number; partnerB: number }> = {};
-
-    for (const t of expenseTxs) {
-      if (!map[t.category]) {
-        map[t.category] = { partnerA: 0, partnerB: 0 };
-      }
-      if (t.paidBy === settings.partnerA.id) {
-        map[t.category].partnerA += Number(t.amount || 0);
-      } else {
-        map[t.category].partnerB += Number(t.amount || 0);
-      }
-    }
-
-    return Object.entries(map)
-      .map(([category, vals]) => ({
-        category,
-        [settings.partnerA.name]: Math.round(vals.partnerA * 100) / 100,
-        [settings.partnerB.name]: Math.round(vals.partnerB * 100) / 100,
+      .map(([name, value]) => ({
+        name,
+        value,
+        percent: totalExpense > 0 ? Math.round((value / totalExpense) * 100) : 0,
       }))
-      .slice(0, 6);
-  }, [transactions, settings]);
+      .sort((a, b) => b.value - a.value);
+  }, [expenseTxs, totalExpense]);
 
-  // Compute 3-Month Trend Summaries
-  const trendSummary = useMemo(() => {
-    if (!threeMonthTrends || threeMonthTrends.length === 0) return null;
-
-    const totalSavingsSum = threeMonthTrends.reduce((acc, m) => acc + m.totalSavings, 0);
-    const avgSavingsRate = Math.round(
-      threeMonthTrends.reduce((acc, m) => acc + m.savingsRatePct, 0) / threeMonthTrends.length
-    );
-    const avgMonthlyExpense = Math.round(
-      threeMonthTrends.reduce((acc, m) => acc + m.totalExpense, 0) / threeMonthTrends.length
-    );
-
-    // Latest month vs previous month delta
-    const latest = threeMonthTrends[threeMonthTrends.length - 1];
-    const prev = threeMonthTrends[threeMonthTrends.length - 2];
-    const expenseDeltaPct = prev && prev.totalExpense > 0
-      ? Math.round(((latest.totalExpense - prev.totalExpense) / prev.totalExpense) * 100)
-      : 0;
-
-    return {
-      totalSavingsSum,
-      avgSavingsRate,
-      avgMonthlyExpense,
-      expenseDeltaPct,
-      latestMonth: latest,
-    };
-  }, [threeMonthTrends]);
-
-  // Consolidate categories across 3 months
-  const categoryMatrixData = useMemo(() => {
-    if (!threeMonthTrends || threeMonthTrends.length < 2) return [];
-
-    const categories = Array.from(
-      new Set(threeMonthTrends.flatMap((m) => Object.keys(m.categoryBreakdown)))
-    ) as string[];
-
-    return categories.map((cat: string) => {
-      const vals = threeMonthTrends.map((m) => m.categoryBreakdown[cat] || 0);
-      const latestVal = vals[vals.length - 1] || 0;
-      const prevVal = vals[vals.length - 2] || 0;
-      const deltaPct = prevVal > 0 ? Math.round(((latestVal - prevVal) / prevVal) * 100) : 0;
-
-      return {
-        category: cat,
-        month1: vals[0] || 0,
-        month2: vals[1] || 0,
-        month3: vals[2] || 0,
-        deltaPct,
-      };
-    }).sort((a, b) => b.month3 - a.month3).slice(0, 7);
-  }, [threeMonthTrends]);
+  // 4. Partner share chart data
+  const partnerData = useMemo(() => [
+    { name: settings.partnerA.name, amount: partnerAExpense, fill: settings.partnerA.color || '#38bdf8' },
+    { name: settings.partnerB.name, amount: partnerBExpense, fill: settings.partnerB.color || '#34d399' },
+  ], [settings, partnerAExpense, partnerBExpense]);
 
   return (
-    <div className="space-y-6 mb-8">
-      {/* View Selector Header */}
-      <div className="bg-zinc-900 border border-white/10 rounded-2xl p-4 shadow-xs flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 ml-2">
-            <TrendingUp className="w-5 h-5" />
+    <div className="space-y-5 pb-8">
+      {/* ── Summary Cards ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* Total Spending */}
+        <div className="rounded-2xl border border-white/10 bg-[#14231e] p-4 shadow-xl shadow-black/20">
+          <div className="flex items-center justify-between text-zinc-400 text-xs">
+            <span>کل مخارج این دوره</span>
+            <Wallet className="w-4 h-4 text-teal-400" />
           </div>
-          <div>
-            <h2 className="text-sm font-extrabold text-white">تحلیل‌های مالی و روند پس‌انداز (Analytics & Saving Trends)</h2>
-            <p className="text-xs text-zinc-400 mt-1">بررسی مخارج و مقایسه روند ۳ ماه اخیر</p>
-          </div>
+          <p className="mt-2 text-xl font-black text-white font-mono">
+            {formatMoney(totalExpense, symbol)}
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-400">{expenseTxs.length} تراکنش ثبت‌شده</p>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-black/20 p-1.5 rounded-xl border border-white/5">
-          <button
-            onClick={() => setActiveTab('3month')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeTab === '3month'
-                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            مقایسه ۳ ماه اخیر
-          </button>
-          <button
-            onClick={() => setActiveTab('current')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'current'
-                ? 'bg-zinc-800 text-indigo-400 shadow-md shadow-black/20 border border-white/10'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            ماه جاری
-          </button>
+        {/* Partner A */}
+        <div className="rounded-2xl border border-white/10 bg-[#14231e] p-4 shadow-xl shadow-black/20">
+          <div className="flex items-center justify-between text-zinc-400 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span>{settings.partnerA.avatar}</span>
+              <span>{settings.partnerA.name}</span>
+            </span>
+            <span className="text-[10px] font-bold text-sky-400">
+              {totalExpense > 0 ? Math.round((partnerAExpense / totalExpense) * 100) : 0}%
+            </span>
+          </div>
+          <p className="mt-2 text-lg font-black text-sky-300 font-mono">
+            {formatMoney(partnerAExpense, symbol)}
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-400">سهم پرداختی</p>
+        </div>
+
+        {/* Partner B */}
+        <div className="rounded-2xl border border-white/10 bg-[#14231e] p-4 shadow-xl shadow-black/20">
+          <div className="flex items-center justify-between text-zinc-400 text-xs">
+            <span className="flex items-center gap-1.5">
+              <span>{settings.partnerB.avatar}</span>
+              <span>{settings.partnerB.name}</span>
+            </span>
+            <span className="text-[10px] font-bold text-emerald-400">
+              {totalExpense > 0 ? Math.round((partnerBExpense / totalExpense) * 100) : 0}%
+            </span>
+          </div>
+          <p className="mt-2 text-lg font-black text-emerald-300 font-mono">
+            {formatMoney(partnerBExpense, symbol)}
+          </p>
+          <p className="mt-1 text-[11px] text-zinc-400">سهم پرداختی</p>
         </div>
       </div>
 
-      {/* --- TAB 1: 3-MONTH COMPARATIVE VIEW & SAVINGS TRENDS --- */}
-      {activeTab === '3month' && (
-        <div className="space-y-6">
-          {/* Summary Metric Cards for 3-Month Trends */}
-          {trendSummary && (
-            <TrendSummaryCards trendSummary={trendSummary} settings={settings} />
-          )}
+      {/* ── Category Breakdown Chart ── */}
+      <section className="rounded-[1.5rem] border border-white/10 bg-[#14231e] p-5 shadow-xl shadow-black/20 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-white">
+            <PieIcon className="w-5 h-5 text-teal-400" />
+            <h2 className="font-bold text-sm">تفکیک دسته‌بندی مخارج</h2>
+          </div>
+          <span className="text-xs text-zinc-400">{categoryData.length} دسته</span>
+        </div>
 
-          {/* 3-Month Comparative Chart: Expenses vs Savings */}
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                  نمودار مقایسه‌ای هزینه‌ها و پس‌انداز ۳ ماه اخیر
-                </h3>
-                <p className="text-[11px] text-zinc-500 mt-1">مقایسه هزینه‌ها (میله‌ای) و نرخ پس‌انداز (خط بنفش)</p>
-              </div>
-              <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-full">
-                3 Months Trend
-              </span>
-            </div>
-
-            <div className="h-72">
+        {categoryData.length === 0 ? (
+          <div className="py-12 text-center text-xs text-zinc-500">
+            هنوز تراکنشی برای نمایش در این ماه ثبت نشده است.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+            <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={threeMonthTrends} margin={{ top: 15, right: 15, left: 0, bottom: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="monthLabel" stroke="#64748b" fontSize={11} tickLine={false} />
-                  <YAxis yAxisId="left" stroke="#64748b" fontSize={10} tickLine={false} />
-                  <YAxis yAxisId="right" orientation="right" stroke="#6366f1" fontSize={10} tickLine={false} unit="%" />
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {categoryData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
                   <Tooltip
-                    formatter={(val: number, name: string) => {
-                      if (name === 'نرخ پس‌انداز (%)') return [`${val}%`, name];
-                      return [`${val.toLocaleString()} ${symbol}`, name];
-                    }}
+                    formatter={(val: number) => [formatMoney(val, symbol), 'مبلغ']}
                     contentStyle={{
-                      backgroundColor: '#ffffff',
-                      borderColor: '#e2e8f0',
+                      backgroundColor: '#18181b',
+                      borderColor: 'rgba(255,255,255,0.1)',
                       borderRadius: '0.75rem',
-                      color: '#0f172a',
+                      color: '#f4f4f5',
                       fontSize: '12px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                     }}
                   />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Bar yAxisId="left" dataKey="totalExpense" name="کل هزینه‌ها" fill="#f43f5e" radius={[6, 6, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="totalSavings" name="میزان پس‌انداز" fill="#10b981" radius={[6, 6, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="partnerAExpense" name={`پرداخت ${settings.partnerA.name}`} fill={settings.partnerA.color} radius={[4, 4, 0, 0]} />
-                  <Bar yAxisId="left" dataKey="partnerBExpense" name={`پرداخت ${settings.partnerB.name}`} fill={settings.partnerB.color} radius={[4, 4, 0, 0]} />
-                  <Line yAxisId="right" type="monotone" dataKey="savingsRatePct" name="نرخ پس‌انداز (%)" stroke="#6366f1" strokeWidth={3} dot={{ r: 5 }} />
-                </ComposedChart>
+                </PieChart>
               </ResponsiveContainer>
             </div>
-          </div>
 
-          {/* MoM Category Comparison Table */}
-          {categoryMatrixData.length > 0 && (
-            <div className="bg-zinc-900 border border-white/10 rounded-2xl p-6 shadow-xs space-y-4 overflow-hidden">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                    تغییرات هزینه‌های دسته‌بندی‌ها در ۳ ماه اخیر
-                  </h3>
-                  <p className="text-[11px] text-zinc-500 mt-1">بررسی ردیف به ردیف دسته‌ها برای شناسایی فرصت‌های صرفه‌جویی</p>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-black/20 text-zinc-400 font-bold border-b border-white/10">
-                    <tr>
-                      <th className="p-3">دسته‌بندی</th>
-                      {threeMonthTrends.map((m) => (
-                        <th key={m.monthKey} className="p-3 font-mono">{m.monthLabel}</th>
-                      ))}
-                      <th className="p-3">تغییر نسبت به ماه قبل</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {categoryMatrixData.map((row) => (
-                      <tr key={row.category} className="hover:bg-white/5 transition-colors">
-                        <td className="p-3 font-bold text-zinc-200">{row.category}</td>
-                        <td className="p-3 font-mono text-zinc-400">{row.month1.toLocaleString()} {symbol}</td>
-                        <td className="p-3 font-mono text-zinc-400">{row.month2.toLocaleString()} {symbol}</td>
-                        <td className="p-3 font-mono font-bold text-indigo-400">{row.month3.toLocaleString()} {symbol}</td>
-                        <td className="p-3">
-                          {row.deltaPct < 0 ? (
-                            <span className="inline-flex items-center text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                              <ArrowDownRight className="w-3 h-3 ml-0.5" />
-                              {Math.abs(row.deltaPct)}% صرفه‌جویی
-                            </span>
-                          ) : row.deltaPct > 0 ? (
-                            <span className="inline-flex items-center text-[10px] font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-                              {row.deltaPct}% افزایش
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-zinc-500">ثابت</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* --- TAB 2: CURRENT MONTH CHARTS --- */}
-      {activeTab === 'current' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Donut Chart: Category Spending Distribution */}
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                هزینه‌ها بر اساس دسته‌بندی
-              </h3>
-              <span className="text-xs text-zinc-500">مجموع</span>
-            </div>
-
-            {categoryData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-xs text-zinc-500">
-                هیچ اطلاعاتی برای این ماه موجود نیست
-              </div>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={categoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      dataKey="value"
-                    >
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(val: number) => [`${val.toLocaleString()} ${symbol}`, 'Amount']}
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        borderColor: '#e2e8f0',
-                        borderRadius: '0.75rem',
-                        color: '#0f172a',
-                        fontSize: '12px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      }}
+            {/* Simple Clean Category List */}
+            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              {categoryData.map((item, idx) => (
+                <div key={item.name} className="flex items-center justify-between text-xs py-1 border-b border-white/5 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full shrink-0"
+                      style={{ backgroundColor: COLORS[idx % COLORS.length] }}
                     />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Legend */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/10 text-xs">
-              {categoryData.slice(0, 6).map((item, idx) => (
-                <div key={item.name} className="flex items-center space-x-1.5 truncate">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                  />
-                  <span className="text-zinc-400 truncate">{item.name}</span>
+                    <span className="font-bold text-zinc-200">{item.name}</span>
+                  </div>
+                  <div className="text-left font-mono">
+                    <span className="text-zinc-300 font-bold">{formatMoney(item.value, symbol)}</span>
+                    <span className="text-[10px] text-zinc-500 mr-2">({item.percent}%)</span>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
+        )}
+      </section>
 
-          {/* Bar Chart: Partner Contribution Comparison */}
-          <div className="bg-zinc-900 border border-white/10 rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                مقایسه پرداختی اعضا
-              </h3>
-              <span className="text-xs text-zinc-500">مبالغ پرداختی</span>
-            </div>
-
-            {partnerComparisonData.length === 0 ? (
-              <div className="h-64 flex items-center justify-center text-xs text-zinc-500">
-                داده مقایسه‌ای موجود نیست
-              </div>
-            ) : (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={partnerComparisonData} margin={{ top: 10, right: 10, left: -20, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" opacity={0.8} />
-                    <XAxis
-                      dataKey="category"
-                      stroke="#64748b"
-                      fontSize={10}
-                      tickLine={false}
-                      interval={0}
-                      angle={-15}
-                      textAnchor="end"
-                    />
-                    <YAxis stroke="#64748b" fontSize={10} tickLine={false} />
-                    <Tooltip
-                      formatter={(val: number) => [`${val.toLocaleString()} ${symbol}`, 'Paid']}
-                      contentStyle={{
-                        backgroundColor: '#ffffff',
-                        borderColor: '#e2e8f0',
-                        borderRadius: '0.75rem',
-                        color: '#0f172a',
-                        fontSize: '12px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                    <Bar dataKey={settings.partnerA.name} fill={settings.partnerA.color} radius={[4, 4, 0, 0]} />
-                    <Bar dataKey={settings.partnerB.name} fill={settings.partnerB.color} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+      {/* ── Direct Partner Comparison Bar Chart ── */}
+      {totalExpense > 0 && (
+        <section className="rounded-[1.5rem] border border-white/10 bg-[#14231e] p-5 shadow-xl shadow-black/20 space-y-4">
+          <div className="flex items-center gap-2 text-white">
+            <BarChart3 className="w-5 h-5 text-indigo-400" />
+            <h2 className="font-bold text-sm">مقایسه سهم دونفره</h2>
           </div>
-        </div>
+
+          <div className="h-44">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={partnerData} layout="vertical" margin={{ top: 10, right: 20, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" horizontal={false} />
+                <XAxis type="number" stroke="#71717a" fontSize={10} tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`} />
+                <YAxis dataKey="name" type="category" stroke="#e4e4e7" fontSize={11} width={60} />
+                <Tooltip
+                  formatter={(val: number) => [formatMoney(val, symbol), 'پرداخت‌شده']}
+                  contentStyle={{
+                    backgroundColor: '#18181b',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    borderRadius: '0.75rem',
+                    color: '#f4f4f5',
+                    fontSize: '12px',
+                  }}
+                />
+                <Bar dataKey="amount" radius={[0, 8, 8, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
       )}
     </div>
   );

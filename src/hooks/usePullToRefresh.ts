@@ -22,17 +22,30 @@ export function usePullToRefresh({ enabled, threshold = 72, onRefresh }: PullToR
     pullDistance,
     isRefreshing,
     bind: {
-      onPointerDown: (event) => {
-        if (!enabled || isRefreshing || window.scrollY > 0) return;
-        originY.current = event.clientY;
+      onTouchStart: (event: React.TouchEvent) => {
+        if (!enabled || isRefreshing) return;
+        const top = window.scrollY || document.documentElement.scrollTop || 0;
+        if (top <= 2 && event.touches.length === 1) {
+          originY.current = event.touches[0].clientY;
+        } else {
+          originY.current = null;
+        }
       },
-      onPointerMove: (event) => {
-        if (originY.current === null || isRefreshing) return;
-        const distance = event.clientY - originY.current;
-        if (distance > 0) setPullDistance(Math.min(distance * 0.42, 120));
+      onTouchMove: (event: React.TouchEvent) => {
+        if (originY.current === null || isRefreshing || event.touches.length !== 1) return;
+        const currentY = event.touches[0].clientY;
+        const delta = currentY - originY.current;
+        const top = window.scrollY || document.documentElement.scrollTop || 0;
+        if (top <= 2 && delta > 8) {
+          // Downward pull at top of page
+          setPullDistance(Math.min(delta * 0.38, 110));
+        } else if (delta < 0) {
+          originY.current = null;
+          setPullDistance(0);
+        }
       },
-      onPointerCancel: () => { originY.current = null; setPullDistance(0); },
-      onPointerUp: async () => {
+      onTouchCancel: () => { originY.current = null; setPullDistance(0); },
+      onTouchEnd: async () => {
         const shouldRefresh = originY.current !== null && pullDistance >= threshold && !isRefreshing;
         originY.current = null;
         if (!shouldRefresh) { setPullDistance(0); return; }

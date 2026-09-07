@@ -651,3 +651,22 @@ apiRouter.post('/internal/run-reminders', async (req, res) => {
   catch (err: any) { res.status(500).json({ error: err.message }); }
 });
 
+// --- GOOGLE DRIVE & DATA BACKUP ---
+apiRouter.get('/backup/export', async (_req, res) => {
+  try {
+    const backup = await (db as any).exportBackup();
+    res.json(backup);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+apiRouter.post('/backup/import', async (req, res) => {
+  try {
+    const success = await (db as any).importBackup(req.body);
+    res.json({ success });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+

@@ -4,6 +4,7 @@ import { AppSettings, Category, Transaction, TransactionType } from '../types';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { formatJalaliDate } from '../utils/formatters';
 
 interface TransactionFormProps {
   isOpen: boolean;
@@ -243,6 +244,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            helperText={settings.useJalaliDate && date ? `تاریخ شمسی: ${formatJalaliDate(date)}` : undefined}
             leftIcon={<Calendar className="w-4 h-4" />}
           />
         </div>

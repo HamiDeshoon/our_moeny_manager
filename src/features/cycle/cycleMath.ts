@@ -42,3 +42,55 @@ export function getMonthDays(year: number, monthIndex: number): Array<string | n
   const count = new Date(year, monthIndex + 1, 0).getDate();
   return [...Array(first.getDay()).fill(null), ...Array.from({ length: count }, (_, index) => iso(new Date(year, monthIndex, index + 1)))];
 }
+
+export function getJalaliMonthDaysGrid(jy: number, jm: number): Array<{ date: string; dayNumber: number } | null> {
+  const count = jm <= 6 ? 31 : jm <= 11 ? 30 : (((((jy - 474) % 2820) + 474) + 38) * 682) % 2816 < 682 ? 30 : 29;
+  // Convert first day of jalali month to gregorian to find weekday
+  let jy1 = jy - 979;
+  let j_day_no = 365 * jy1 + Math.floor(jy1 / 33) * 8 + Math.floor(((jy1 % 33) + 3) / 4);
+  for (let i = 0; i < jm - 1; ++i) {
+    j_day_no += (i < 6) ? 31 : 30;
+  }
+  let g_day_no = j_day_no + 79;
+  let gy = 1600 + 400 * Math.floor(g_day_no / 146097);
+  g_day_no = g_day_no % 146097;
+  let leap = true;
+  if (g_day_no >= 36525) {
+    g_day_no--;
+    gy += 100 * Math.floor(g_day_no / 36524);
+    g_day_no = g_day_no % 36524;
+    if (g_day_no >= 365) gy++;
+    else leap = false;
+  }
+  gy += 4 * Math.floor(g_day_no / 1461);
+  g_day_no %= 1461;
+  if (g_day_no >= 366) {
+    leap = false;
+    g_day_no--;
+    gy += Math.floor(g_day_no / 365);
+    g_day_no %= 365;
+  }
+  const g_days_in_month = [31, (leap ? 29 : 28), 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm = 0;
+  while (g_day_no >= g_days_in_month[gm]) {
+    g_day_no -= g_days_in_month[gm];
+    gm++;
+  }
+  const gd = g_day_no + 1;
+  const firstGregDate = new Date(gy, gm, gd);
+  // Saturday = 0, Sunday = 1, ..., Friday = 6
+  const startWeekday = (firstGregDate.getDay() + 1) % 7;
+
+  const grid: Array<{ date: string; dayNumber: number } | null> = Array(startWeekday).fill(null);
+
+  for (let d = 1; d <= count; d++) {
+    // Determine each day's ISO date
+    const dOffsetMs = (d - 1) * 86_400_000;
+    const currentGreg = new Date(firstGregDate.getTime() + dOffsetMs);
+    const dateStr = currentGreg.toISOString().slice(0, 10);
+    grid.push({ date: dateStr, dayNumber: d });
+  }
+
+  return grid;
+}
+
