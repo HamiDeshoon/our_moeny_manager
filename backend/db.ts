@@ -5,10 +5,13 @@ import {
   AppSettings,
   Bill,
   Budget,
+  CoupleCheckin,
   CoupleNote,
   CycleLog,
   CycleSettings,
   GroceryItem,
+  Habit,
+  HabitLog,
   ImportantDate,
   MonthTrendData,
   NoteColor,
@@ -121,6 +124,9 @@ type StoreData = {
   coupleNotes: CoupleNote[];
   wishGoals: WishGoal[];
   importantDates: ImportantDate[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  coupleCheckins: CoupleCheckin[];
   pushSubscriptions: StoredPushSubscription[];
   notificationPreferences: Record<string, NotificationPreferences>;
   notificationDeliveries: string[];
@@ -285,6 +291,39 @@ class PostgresDB {
         category TEXT NOT NULL DEFAULT 'Other',
         created_by TEXT NOT NULL,
         created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS habits (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT,
+        category TEXT NOT NULL DEFAULT 'Other',
+        assigned_to TEXT NOT NULL DEFAULT 'both',
+        frequency TEXT NOT NULL DEFAULT 'DAILY',
+        target_days_per_week INTEGER,
+        icon TEXT,
+        color TEXT DEFAULT 'emerald',
+        created_by TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS habit_logs (
+        id TEXT PRIMARY KEY,
+        habit_id TEXT NOT NULL,
+        date TEXT NOT NULL,
+        completed_by TEXT NOT NULL,
+        completed_at TEXT NOT NULL,
+        CONSTRAINT unique_habit_date_user UNIQUE (habit_id, date, completed_by)
+      );
+
+      CREATE TABLE IF NOT EXISTS couple_checkins (
+        id TEXT PRIMARY KEY,
+        date TEXT NOT NULL,
+        partner_id TEXT NOT NULL,
+        mood TEXT NOT NULL,
+        appreciation_note TEXT,
+        created_at TEXT NOT NULL,
+        CONSTRAINT unique_partner_date_checkin UNIQUE (date, partner_id)
       );
 
       CREATE TABLE IF NOT EXISTS couple_notes (
@@ -1110,6 +1149,121 @@ class PostgresDB {
     return (res.rowCount || 0) > 0;
   }
 
+  // ── Habits & Habit Logs ──
+  async getHabits(): Promise<Habit[]> {
+    await this.ensureReady();
+    const res = await this.pool.query('SELECT * FROM habits ORDER BY created_at DESC');
+    return res.rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      description: r.description || undefined,
+      category: r.category,
+      assignedTo: r.assigned_to,
+      frequency: r.frequency,
+      targetDaysPerWeek: r.target_days_per_week !== null ? Number(r.target_days_per_week) : undefined,
+      icon: r.icon || undefined,
+      color: r.color || undefined,
+      createdBy: r.created_by,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async addHabit(habit: Omit<Habit, 'id' | 'createdAt'>): Promise<Habit> {
+    await this.ensureReady();
+    const id = genId('habit');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO habits (id, title, description, category, assigned_to, frequency, target_days_per_week, icon, color, created_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [
+        id,
+        habit.title,
+        habit.description || null,
+        habit.category || 'Other',
+        habit.assignedTo || 'both',
+        habit.frequency || 'DAILY',
+        habit.targetDaysPerWeek || null,
+        habit.icon || null,
+        habit.color || 'emerald',
+        habit.createdBy,
+        createdAt,
+      ]
+    );
+    return { ...habit, id, createdAt };
+  }
+
+  async deleteHabit(id: string): Promise<boolean> {
+    await this.ensureReady();
+    await this.pool.query('DELETE FROM habit_logs WHERE habit_id = $1', [id]);
+    const res = await this.pool.query('DELETE FROM habits WHERE id = $1', [id]);
+    return (res.rowCount || 0) > 0;
+  }
+
+  async getHabitLogs(date?: string): Promise<HabitLog[]> {
+    await this.ensureReady();
+    const query = date ? 'SELECT * FROM habit_logs WHERE date = $1' : 'SELECT * FROM habit_logs ORDER BY date DESC';
+    const params = date ? [date] : [];
+    const res = await this.pool.query(query, params);
+    return res.rows.map(r => ({
+      id: r.id,
+      habitId: r.habit_id,
+      date: r.date,
+      completedBy: r.completed_by,
+      completedAt: r.completed_at,
+    }));
+  }
+
+  async toggleHabitLog(habitId: string, date: string, completedBy: string): Promise<{ completed: boolean; log?: HabitLog }> {
+    await this.ensureReady();
+    const existing = await this.pool.query(
+      'SELECT id FROM habit_logs WHERE habit_id = $1 AND date = $2 AND completed_by = $3',
+      [habitId, date, completedBy]
+    );
+    if (existing.rows.length > 0) {
+      await this.pool.query('DELETE FROM habit_logs WHERE id = $1', [existing.rows[0].id]);
+      return { completed: false };
+    }
+    const id = genId('hlog');
+    const completedAt = new Date().toISOString();
+    await this.pool.query(
+      'INSERT INTO habit_logs (id, habit_id, date, completed_by, completed_at) VALUES ($1, $2, $3, $4, $5)',
+      [id, habitId, date, completedBy, completedAt]
+    );
+    return { completed: true, log: { id, habitId, date, completedBy, completedAt } };
+  }
+
+  // ── Couple Check-ins ──
+  async getCoupleCheckins(date?: string): Promise<CoupleCheckin[]> {
+    await this.ensureReady();
+    const query = date ? 'SELECT * FROM couple_checkins WHERE date = $1' : 'SELECT * FROM couple_checkins ORDER BY date DESC';
+    const params = date ? [date] : [];
+    const res = await this.pool.query(query, params);
+    return res.rows.map(r => ({
+      id: r.id,
+      date: r.date,
+      partnerId: r.partner_id,
+      mood: r.mood,
+      appreciationNote: r.appreciation_note || undefined,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async saveCoupleCheckin(checkin: Omit<CoupleCheckin, 'id' | 'createdAt'>): Promise<CoupleCheckin> {
+    await this.ensureReady();
+    const id = genId('chkin');
+    const createdAt = new Date().toISOString();
+    await this.pool.query(
+      `INSERT INTO couple_checkins (id, date, partner_id, mood, appreciation_note, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (date, partner_id) DO UPDATE SET
+         mood = EXCLUDED.mood,
+         appreciation_note = EXCLUDED.appreciation_note,
+         created_at = EXCLUDED.created_at`,
+      [id, checkin.date, checkin.partnerId, checkin.mood, checkin.appreciationNote || null, createdAt]
+    );
+    return { ...checkin, id, createdAt };
+  }
+
   async upsertPushSubscription(userName: string, subscription: PushSubscriptionInput): Promise<void> {
     await this.ensureReady();
     await this.pool.query(
@@ -1258,6 +1412,9 @@ class LocalFileDB {
         coupleNotes: Array.isArray(parsed.coupleNotes) ? parsed.coupleNotes : [],
         wishGoals: Array.isArray(parsed.wishGoals) ? parsed.wishGoals : [],
         importantDates: Array.isArray(parsed.importantDates) ? parsed.importantDates : [],
+        habits: Array.isArray(parsed.habits) ? parsed.habits : [],
+        habitLogs: Array.isArray(parsed.habitLogs) ? parsed.habitLogs : [],
+        coupleCheckins: Array.isArray(parsed.coupleCheckins) ? parsed.coupleCheckins : [],
         pushSubscriptions: Array.isArray(parsed.pushSubscriptions) ? parsed.pushSubscriptions : [],
         notificationPreferences: parsed.notificationPreferences || {},
         notificationDeliveries: Array.isArray(parsed.notificationDeliveries) ? parsed.notificationDeliveries : [],
@@ -1353,6 +1510,79 @@ class LocalFileDB {
     const deleted = this.store.transactions.length !== before;
     if (deleted) this.save();
     return deleted;
+  }
+
+  // ── Habits & Habit Logs ──
+  async getHabits(): Promise<Habit[]> {
+    return [...(this.store.habits || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async addHabit(habit: Omit<Habit, 'id' | 'createdAt'>): Promise<Habit> {
+    if (!this.store.habits) this.store.habits = [];
+    const id = genId('habit');
+    const createdAt = new Date().toISOString();
+    const newHabit: Habit = { ...habit, id, createdAt };
+    this.store.habits.unshift(newHabit);
+    this.save();
+    return newHabit;
+  }
+
+  async deleteHabit(id: string): Promise<boolean> {
+    if (!this.store.habits) return false;
+    const before = this.store.habits.length;
+    this.store.habits = this.store.habits.filter(h => h.id !== id);
+    if (this.store.habitLogs) {
+      this.store.habitLogs = this.store.habitLogs.filter(l => l.habitId !== id);
+    }
+    const deleted = this.store.habits.length !== before;
+    if (deleted) this.save();
+    return deleted;
+  }
+
+  async getHabitLogs(date?: string): Promise<HabitLog[]> {
+    const logs = this.store.habitLogs || [];
+    if (date) return logs.filter(l => l.date === date);
+    return [...logs].sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async toggleHabitLog(habitId: string, date: string, completedBy: string): Promise<{ completed: boolean; log?: HabitLog }> {
+    if (!this.store.habitLogs) this.store.habitLogs = [];
+    const idx = this.store.habitLogs.findIndex(l => l.habitId === habitId && l.date === date && l.completedBy === completedBy);
+    if (idx !== -1) {
+      this.store.habitLogs.splice(idx, 1);
+      this.save();
+      return { completed: false };
+    }
+    const id = genId('hlog');
+    const completedAt = new Date().toISOString();
+    const newLog: HabitLog = { id, habitId, date, completedBy, completedAt };
+    this.store.habitLogs.push(newLog);
+    this.save();
+    return { completed: true, log: newLog };
+  }
+
+  // ── Couple Check-ins ──
+  async getCoupleCheckins(date?: string): Promise<CoupleCheckin[]> {
+    const checkins = this.store.coupleCheckins || [];
+    if (date) return checkins.filter(c => c.date === date);
+    return [...checkins].sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async saveCoupleCheckin(checkin: Omit<CoupleCheckin, 'id' | 'createdAt'>): Promise<CoupleCheckin> {
+    if (!this.store.coupleCheckins) this.store.coupleCheckins = [];
+    const idx = this.store.coupleCheckins.findIndex(c => c.date === checkin.date && c.partnerId === checkin.partnerId);
+    const createdAt = new Date().toISOString();
+    if (idx !== -1) {
+      const updated: CoupleCheckin = { ...this.store.coupleCheckins[idx], ...checkin, createdAt };
+      this.store.coupleCheckins[idx] = updated;
+      this.save();
+      return updated;
+    }
+    const id = genId('chkin');
+    const newCheckin: CoupleCheckin = { ...checkin, id, createdAt };
+    this.store.coupleCheckins.push(newCheckin);
+    this.save();
+    return newCheckin;
   }
 
   async processRecurringExpenses(targetMonth: string): Promise<Transaction[]> {

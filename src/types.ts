@@ -122,7 +122,7 @@ export interface AppSettings {
 }
 
 export interface AIParsedVoice {
-  actionType?: 'LOG_EXPENSE' | 'SET_BUDGET' | 'ADD_RECURRING' | 'ADD_BILL';
+  actionType?: 'LOG_EXPENSE' | 'SET_BUDGET' | 'ADD_RECURRING' | 'ADD_BILL' | 'ADD_TASK' | 'ADD_GROCERY' | 'ADD_HABIT';
   title: string;
   amount: number;
   category: Category;
@@ -134,6 +134,11 @@ export interface AIParsedVoice {
   interval?: 'MONTHLY' | 'BI_MONTHLY' | 'QUARTERLY' | 'YEARLY';
   dueDateDay?: number;
   autopay?: boolean;
+  assignedTo?: string;
+  priority?: TodoPriority;
+  dueDate?: string;
+  quantity?: string;
+  frequency?: 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
 }
 
 export interface AIScanReceipt {
@@ -278,4 +283,42 @@ export interface ImportantDate {
   id: string; title: string; date: string; type: DateType;
   isRecurringYearly: boolean; notes?: string; reminderDaysBefore?: number;
   icon?: string; color?: NoteColor; createdBy: string; createdAt: string;
+}
+
+// ──────────────────────────────────────────────
+// Routines, Habits & Daily Check-ins Types
+// ──────────────────────────────────────────────
+
+export type HabitCategory = 'Health' | 'Home' | 'Mindfulness' | 'Relationship' | 'Fitness' | 'Personal' | 'Other';
+
+export interface Habit {
+  id: string;
+  title: string;
+  description?: string;
+  category: HabitCategory;
+  assignedTo: string; // 'partner_a' | 'partner_b' | 'both'
+  frequency: 'DAILY' | 'WEEKLY' | 'WEEKDAYS';
+  targetDaysPerWeek?: number;
+  icon?: string;
+  color?: NoteColor;
+  streakCount?: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface HabitLog {
+  id: string;
+  habitId: string;
+  date: string; // YYYY-MM-DD
+  completedBy: string; // partner id
+  completedAt: string;
+}
+
+export interface CoupleCheckin {
+  id: string;
+  date: string; // YYYY-MM-DD
+  partnerId: string; // partner_a or partner_b
+  mood: string; // e.g. '😊' | '🥰' | '😴' | '💪' | '😌'
+  appreciationNote?: string; // Daily gratitude or sweet note to partner
+  createdAt: string;
 }
