@@ -130,4 +130,15 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     expect(queriesExecuted[0].sql).toContain('INSERT INTO transactions');
     expect(queriesExecuted[0].params?.length).toBe(3 * 14);
   });
+
+  it('throws an error when initialized with an HTTPS web URL instead of a PostgreSQL URI', () => {
+    const origUrl = process.env.DATABASE_URL;
+    process.env.DATABASE_URL = 'https://isubjxutyjpgsrtdiihl.supabase.co';
+    try {
+      const dbInstance = new PostgresDB();
+      expect(dbInstance.getInitError()?.message).toContain('آدرس Supabase وارد شده یک URL وب است');
+    } finally {
+      if (origUrl) process.env.DATABASE_URL = origUrl; else delete process.env.DATABASE_URL;
+    }
+  });
 });

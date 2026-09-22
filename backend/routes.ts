@@ -80,8 +80,19 @@ apiRouter.post('/auth/login', async (req, res) => {
 // --- SETTINGS ---
 apiRouter.get('/settings', async (req, res) => {
   try {
-    const settings = await db.getSettings();
-    const storageMode = typeof db.getStorageMode === 'function' ? db.getStorageMode() : ((process.env.DATABASE_URL || process.env.POSTGRES_URL) ? 'postgresql' : 'local_file');
+    const dbInitError = (db as any).getInitError ? (db as any).getInitError()?.message : null;
+    let settings;
+    try {
+      settings = await db.getSettings();
+    } catch {
+      settings = {
+        partnerA: { name: 'کاربر اول', avatar: '👨‍💼' },
+        partnerB: { name: 'کاربر دوم', avatar: '👩‍⚕️' },
+        geminiApiKey: '',
+        currencySymbol: 'تومان',
+      };
+    }
+    const storageMode = typeof db.getStorageMode === 'function' ? db.getStorageMode() : ((process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.SUPABASE_URL || process.env.SUPABASE_DB_URL) ? 'postgresql' : 'local_file');
     const maskedKey = settings.geminiApiKey
       ? `${settings.geminiApiKey.substring(0, 4)}...${settings.geminiApiKey.substring(settings.geminiApiKey.length - 4)}`
       : '';
@@ -91,6 +102,7 @@ apiRouter.get('/settings', async (req, res) => {
       maskedKey,
       hasCustomKey: Boolean(settings.geminiApiKey),
       storageMode,
+      dbInitError,
       appVersion: APP_VERSION,
       gitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT || '',
       minTransactionAmount: MIN_TRANSACTION_AMOUNT_TOMAN,

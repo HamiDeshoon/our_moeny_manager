@@ -116,6 +116,7 @@ export interface AppSettings {
   useJalaliDate?: boolean; // Display Shamsi (Jalali) dates
   noSettlementsMode?: boolean; // Unified household mode (no debt tracking)
   storageMode?: 'postgresql' | 'local_file';
+  dbInitError?: string | null;
   appVersion?: string;
   gitCommitSha?: string;
   minTransactionAmount?: number;
