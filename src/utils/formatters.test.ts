@@ -9,9 +9,6 @@ import {
   jalaliToGregorian,
   isJalaliLeapYear,
   getJalaliMonthDays,
-  formatJalaliDate,
-  toJalaliShort,
-  getJalaliMonthYear,
 } from './formatters';
 
 describe('formatMoney', () => {
