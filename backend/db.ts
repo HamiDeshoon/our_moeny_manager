@@ -931,6 +931,12 @@ class PostgresDB {
     return (res.rowCount || 0) > 0;
   }
 
+  async clearCompletedTodos(): Promise<boolean> {
+    await this.ensureReady();
+    await this.pool.query('DELETE FROM todos WHERE is_completed = true');
+    return true;
+  }
+
   // ── Couple Notes ──
   async getCoupleNotes(): Promise<CoupleNote[]> {
     await this.ensureReady();
@@ -1612,6 +1618,13 @@ class LocalFileDB {
     const deleted = this.store.todos.length !== before;
     if (deleted) this.save();
     return deleted;
+  }
+
+  async clearCompletedTodos(): Promise<boolean> {
+    if (!this.store.todos) return true;
+    this.store.todos = this.store.todos.filter(t => !t.isCompleted);
+    this.save();
+    return true;
   }
 
   // ── Couple Notes ──

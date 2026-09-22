@@ -523,6 +523,16 @@ apiRouter.post('/todos', async (req: any, res) => {
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
+apiRouter.patch('/todos/:id/toggle', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { isCompleted } = req.body;
+    const updated = await db.updateTodo(id, { isCompleted }, req.authUser);
+    if (!updated) return res.status(404).json({ error: 'Todo not found' });
+    res.json(updated);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
 apiRouter.patch('/todos/:id', async (req: any, res) => {
   try {
     const { id } = req.params;
@@ -530,6 +540,13 @@ apiRouter.patch('/todos/:id', async (req: any, res) => {
     const updated = await db.updateTodo(id, updates, req.authUser);
     if (!updated) return res.status(404).json({ error: 'Todo not found' });
     res.json(updated);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.delete('/todos/completed/clear', async (_req, res) => {
+  try {
+    await db.clearCompletedTodos();
+    res.json({ success: true });
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
