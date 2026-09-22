@@ -87,14 +87,10 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
 
   const handleClearCompleted = async () => {
     haptic('warning');
-    setTodos((prev) => prev.filter((t) => !t.isCompleted));
-    try {
-      await api.clearCompletedTodos();
-      haptic('success');
-    } catch (err) {
-      console.error('Failed to clear completed todos', err);
-      loadTodos();
-    }
+    await updateItemOptimistic(
+      (prev) => prev.filter((t) => !t.isCompleted),
+      () => api.clearCompletedTodos()
+    );
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
