@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Check, Trash2, ShoppingCart, CheckCheck, Sparkles, Filter } from 'lucide-react';
+import { Plus, Check, Trash2 } from 'lucide-react';
 import { AppSettings, AuthUser, GroceryCategory, GroceryItem } from '../types';
 import { api } from '../services/api';
 import { haptic } from '../utils/haptics';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { useListManager } from '../hooks/useListManager';
 
 interface GroceryListProps {
   settings: AppSettings;
@@ -27,8 +28,6 @@ const CATEGORIES: { id: GroceryCategory; label: string; icon: string }[] = [
 ];
 
 export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser }) => {
-  const [items, setItems] = useState<GroceryItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
 
@@ -41,70 +40,58 @@ export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser 
   const partnerAName = settings.partnerA?.name || 'حامد';
   const partnerBName = settings.partnerB?.name || 'فاطی';
 
-  const loadItems = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getGroceryItems();
-      setItems(data);
-    } catch (err) {
-      console.error('Failed to load grocery items', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchItems = useCallback(() => api.getGroceryItems(), []);
 
-  useEffect(() => {
-    loadItems();
-  }, []);
+  const { items, loading, updateItemOptimistic, addItem } = useListManager<GroceryItem>({
+    fetchItems,
+    onError: (err, action) => {
+      console.error(`Failed during grocery list ${action}`, err);
+    },
+  });
 
   const handleToggle = async (item: GroceryItem) => {
     haptic('light');
     const newChecked = !item.isChecked;
-    // Optimistic update
-    setItems((prev) =>
-      prev.map((i) =>
-        i.id === item.id
-          ? {
-              ...i,
-              isChecked: newChecked,
-              checkedAt: newChecked ? new Date().toISOString() : undefined,
-              checkedBy: newChecked ? (currentUser?.partnerId || 'partner_a') : undefined,
-            }
-          : i
-      )
-    );
 
-    try {
-      await api.toggleGroceryItem(item.id, newChecked);
-      if (newChecked) haptic('success');
-    } catch (err) {
-      console.error('Failed to toggle item', err);
-      loadItems(); // Rollback
-    }
+    await updateItemOptimistic(
+      (prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? {
+                ...i,
+                isChecked: newChecked,
+                checkedAt: newChecked ? new Date().toISOString() : undefined,
+                checkedBy: newChecked ? (currentUser?.partnerId || 'partner_a') : undefined,
+              }
+            : i
+        ),
+      async () => {
+        await api.toggleGroceryItem(item.id, newChecked);
+        if (newChecked) haptic('success');
+      }
+    );
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     haptic('warning');
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    try {
-      await api.deleteGroceryItem(id);
-    } catch (err) {
-      console.error('Failed to delete grocery item', err);
-      loadItems();
-    }
+
+    await updateItemOptimistic(
+      (prev) => prev.filter((i) => i.id !== id),
+      () => api.deleteGroceryItem(id)
+    );
   };
 
   const handleClearChecked = async () => {
     haptic('medium');
-    setItems((prev) => prev.filter((i) => !i.isChecked));
-    try {
-      await api.clearCheckedGroceryItems();
-      haptic('success');
-    } catch (err) {
-      console.error('Failed to clear checked items', err);
-      loadItems();
-    }
+
+    await updateItemOptimistic(
+      (prev) => prev.filter((i) => !i.isChecked),
+      async () => {
+        await api.clearCheckedGroceryItems();
+        haptic('success');
+      }
+    );
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
@@ -113,22 +100,24 @@ export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser 
 
     haptic('medium');
     const addedBy = currentUser?.partnerId || 'partner_a';
+
     try {
-      const newItem = await api.addGroceryItem({
-        title: title.trim(),
-        category,
-        quantity: quantity.trim() || undefined,
-        assignedTo: assignedTo || undefined,
-        addedBy,
-      });
-      setItems((prev) => [newItem, ...prev]);
+      await addItem(() =>
+        api.addGroceryItem({
+          title: title.trim(),
+          category,
+          quantity: quantity.trim() || undefined,
+          assignedTo: assignedTo || undefined,
+          addedBy,
+        })
+      );
       setTitle('');
       setQuantity('');
       setAssignedTo('');
       setIsAddOpen(false);
       haptic('success');
     } catch (err) {
-      console.error('Failed to add grocery item', err);
+      // Error handled by hook or catch block
     }
   };
 
