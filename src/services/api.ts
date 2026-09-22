@@ -224,8 +224,10 @@ export const api = {
   // Todos
   getTodos: () => fetchJSON<TodoItem[]>('/todos'),
   addTodo: (item: Omit<TodoItem,'id'|'createdAt'|'isCompleted'>) => fetchJSON<TodoItem>('/todos', { method:'POST', body:JSON.stringify(item) }),
+  toggleTodo: (id: string, isCompleted: boolean) => fetchJSON<TodoItem>(`/todos/${id}/toggle`, { method: 'PATCH', body: JSON.stringify({ isCompleted }) }),
   updateTodo: (id:string, updates:Partial<TodoItem>) => fetchJSON<TodoItem>(`/todos/${id}`, { method:'PATCH', body:JSON.stringify(updates) }),
   deleteTodo: (id:string) => fetchJSON<{success:boolean}>(`/todos/${id}`, { method:'DELETE' }),
+  clearCompletedTodos: () => fetchJSON<{success:boolean}>('/todos/completed/clear', { method:'DELETE' }),
 
   // Notes
   getCoupleNotes: () => fetchJSON<CoupleNote[]>('/notes'),
@@ -255,6 +257,17 @@ export const api = {
     fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'POST', body: JSON.stringify(subscription) }),
   deletePushSubscription: (endpoint: string) =>
     fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
+
+  // Habits & Habit Logs
+  getHabits: () => fetchJSON<import('../types').Habit[]>('/habits'),
+  addHabit: (habit: Omit<import('../types').Habit, 'id' | 'createdAt'>) => fetchJSON<import('../types').Habit>('/habits', { method: 'POST', body: JSON.stringify(habit) }),
+  deleteHabit: (id: string) => fetchJSON<{ success: boolean }>(`/habits/${id}`, { method: 'DELETE' }),
+  getHabitLogs: (date?: string) => fetchJSON<import('../types').HabitLog[]>(`/habit-logs${date ? `?date=${date}` : ''}`),
+  toggleHabitLog: (habitId: string, date: string) => fetchJSON<{ completed: boolean; log?: import('../types').HabitLog }>('/habit-logs/toggle', { method: 'POST', body: JSON.stringify({ habitId, date }) }),
+
+  // Couple Daily Check-ins
+  getCoupleCheckins: (date?: string) => fetchJSON<import('../types').CoupleCheckin[]>(`/checkins${date ? `?date=${date}` : ''}`),
+  saveCoupleCheckin: (checkin: { date: string; mood: string; appreciationNote?: string }) => fetchJSON<import('../types').CoupleCheckin>('/checkins', { method: 'POST', body: JSON.stringify(checkin) }),
 
   // Backup & Google Drive Data Sync
   exportBackup: () => fetchJSON<any>('/backup/export'),

@@ -6,9 +6,8 @@ import { APP_VERSION, MIN_TRANSACTION_AMOUNT_TOMAN } from '../src/types.js';
 import { sendDueReminders } from './jobs/sendReminders.js';
 import { getCalendarPhase } from '../src/features/cycle/cycleMath.js';
 
-const AUTH_HAMID_HASH = process.env.AUTH_HAMID_HASH || '$2b$12$sjGiXdc5bRkPFJmSb8V0qOob9jQvmuOoMIvUiCmPAmKHCFc7PPJQW';
-const AUTH_FATI_HASH  = process.env.AUTH_FATI_HASH  || '$2b$12$xRsMeQJNuUbyiyRnk8NhQ.oS5Mz4xdjGdPhuoqfB4JcNUbA9F6bRS';
-if (!process.env.AUTH_HAMID_HASH) console.warn('[SECURITY] AUTH_HAMID_HASH not set — using dev default!');
+if (!process.env.AUTH_HAMID_HASH) console.warn('[SECURITY] AUTH_HAMID_HASH environment variable is not set!');
+if (!process.env.AUTH_FATI_HASH) console.warn('[SECURITY] AUTH_FATI_HASH environment variable is not set!');
 
 export const apiRouter = Router();
 
@@ -70,8 +69,8 @@ apiRouter.post('/auth/login', async (req, res) => {
     if (!u || !p) return res.status(400).json({ error: 'نام کاربری و رمز عبور الزامی است' });
     let hash: string|null = null;
     let profile: any = null;
-    if (u === 'hamid') { hash = AUTH_HAMID_HASH; profile = { username:'hamid', name:'کاربر اول', partnerId:'partner_a', avatar:'👨‍💼' }; }
-    else if (u === 'fati'||u === 'fatemeh') { hash = AUTH_FATI_HASH; profile = { username:'fati', name:'کاربر دوم', partnerId:'partner_b', avatar:'👩‍⚕️' }; }
+    if (u === 'hamid') { hash = process.env.AUTH_HAMID_HASH || null; profile = { username:'hamid', name:'کاربر اول', partnerId:'partner_a', avatar:'👨‍💼' }; }
+    else if (u === 'fati'||u === 'fatemeh') { hash = process.env.AUTH_FATI_HASH || null; profile = { username:'fati', name:'کاربر دوم', partnerId:'partner_b', avatar:'👩‍⚕️' }; }
     if (!hash) { await bcrypt.compare('x','$2b$12$invalidhashfortimingprotection000000000000000000000000'); return res.status(401).json({ error: 'نام کاربری یا رمز عبور اشتباه است' }); }
     if (!await bcrypt.compare(p, hash)) return res.status(401).json({ error: 'نام کاربری یا رمز عبور اشتباه است' });
     return res.json({ success: true, user: profile });
@@ -405,6 +404,67 @@ apiRouter.delete('/cycle/logs/:date', async (req, res) => {
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
+// Habits
+apiRouter.get('/habits', async (_req, res) => {
+  try {
+    res.json(await (db as any).getHabits());
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/habits', async (req: any, res) => {
+  try {
+    const habit = req.body;
+    if (!habit || !habit.title) return res.status(400).json({ error: 'Title is required' });
+    const createdBy = req.authUser || habit.createdBy || 'partner_a';
+    const saved = await (db as any).addHabit({ ...habit, createdBy });
+    res.json(saved);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.delete('/habits/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await (db as any).deleteHabit(id);
+    res.json({ success });
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+// Habit Logs
+apiRouter.get('/habit-logs', async (req, res) => {
+  try {
+    const date = req.query.date as string | undefined;
+    res.json(await (db as any).getHabitLogs(date));
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/habit-logs/toggle', async (req: any, res) => {
+  try {
+    const { habitId, date } = req.body;
+    if (!habitId || !date) return res.status(400).json({ error: 'habitId and date are required' });
+    const completedBy = req.authUser || 'partner_a';
+    const result = await (db as any).toggleHabitLog(habitId, date, completedBy);
+    res.json(result);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+// Couple Daily Check-ins
+apiRouter.get('/checkins', async (req, res) => {
+  try {
+    const date = req.query.date as string | undefined;
+    res.json(await (db as any).getCoupleCheckins(date));
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/checkins', async (req: any, res) => {
+  try {
+    const checkin = req.body;
+    if (!checkin || !checkin.date || !checkin.mood) return res.status(400).json({ error: 'date and mood are required' });
+    const partnerId = req.authUser === 'fati' || req.authUser === 'fatemeh' ? 'partner_b' : 'partner_a';
+    const saved = await (db as any).saveCoupleCheckin({ ...checkin, partnerId });
+    res.json(saved);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
 apiRouter.get('/cycle/settings', async (_req, res) => {
   try {
     const settings = await db.getCycleSettings();
@@ -523,6 +583,16 @@ apiRouter.post('/todos', async (req: any, res) => {
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
+apiRouter.patch('/todos/:id/toggle', async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { isCompleted } = req.body;
+    const updated = await db.updateTodo(id, { isCompleted }, req.authUser);
+    if (!updated) return res.status(404).json({ error: 'Todo not found' });
+    res.json(updated);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
 apiRouter.patch('/todos/:id', async (req: any, res) => {
   try {
     const { id } = req.params;
@@ -530,6 +600,13 @@ apiRouter.patch('/todos/:id', async (req: any, res) => {
     const updated = await db.updateTodo(id, updates, req.authUser);
     if (!updated) return res.status(404).json({ error: 'Todo not found' });
     res.json(updated);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.delete('/todos/completed/clear', async (_req, res) => {
+  try {
+    await db.clearCompletedTodos();
+    res.json({ success: true });
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 

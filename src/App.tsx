@@ -13,6 +13,7 @@ import { BottomTabBar } from './features/app-shell/BottomTabBar';
 import { ContextualFab } from './features/app-shell/ContextualFab';
 import type { ActiveModal, AppTab, HomeView } from './features/app-shell/appShell.types';
 import { HomeDashboard } from './features/home/HomeDashboard';
+import { RoutinesScreen } from './features/routines/RoutinesScreen';
 import { CycleTrackerScreen } from './features/cycle/CycleTrackerScreen';
 import { CycleLogSheet } from './features/cycle/CycleLogSheet';
 import { getCycleInsights } from './features/insights/cycleInsightApi';
@@ -541,6 +542,9 @@ export default function App() {
           <AnimatePresence mode="wait">
             <motion.div key={`${activeTab}-${homeView}`} {...screenMotion}>
               {activeTab === 'home' ? homeScreen : null}
+              {activeTab === 'routines' ? (
+                <RoutinesScreen settings={activeSettings} currentUser={currentUser} />
+              ) : null}
               {activeTab === 'analytics' ? (
                 <AnalyticsCharts
                   transactions={transactions}

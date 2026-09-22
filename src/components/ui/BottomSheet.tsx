@@ -11,17 +11,24 @@ interface BottomSheetProps {
 }
 
 export function BottomSheet({ isOpen, onClose, title, children, fullHeight = false }: BottomSheetProps) {
-  // Prevent body scroll when open
+  // Prevent body scroll when open and close on Escape key press
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
     } else {
       document.body.style.overflow = 'unset';
     }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   return (
     <AnimatePresence>
@@ -38,6 +45,9 @@ export function BottomSheet({ isOpen, onClose, title, children, fullHeight = fal
 
           {/* Sheet / Dialog */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bottom-sheet-title"
             initial={{ y: '100%', opacity: 0, scale: 0.95 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: '100%', opacity: 0, scale: 0.95 }}
@@ -53,11 +63,11 @@ export function BottomSheet({ isOpen, onClose, title, children, fullHeight = fal
 
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 shrink-0">
-              <h2 className="text-lg font-bold text-white tracking-tight">{title}</h2>
+              <h2 id="bottom-sheet-title" className="text-lg font-bold text-white tracking-tight">{title}</h2>
               <button
                 onClick={onClose}
-                className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                aria-label="Close"
+                className="p-2 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                aria-label="بستن"
               >
                 <X className="w-5 h-5" />
               </button>

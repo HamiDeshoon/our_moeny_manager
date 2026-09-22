@@ -1,65 +1,129 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getSavedCustomApiKey, saveCustomApiKey } from './api';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { api } from './api';
 
-describe('saveCustomApiKey & getSavedCustomApiKey', () => {
+describe('Todos API Service', () => {
+  const mockFetch = vi.fn();
+
   beforeEach(() => {
-    localStorage.clear();
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  describe('saveCustomApiKey', () => {
-    it('saves custom API key to localStorage when non-empty string is provided', () => {
-      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
-      saveCustomApiKey('test-key-123');
-
-      expect(setItemSpy).toHaveBeenCalledWith('duospend_gemini_key', 'test-key-123');
-      expect(localStorage.getItem('duospend_gemini_key')).toBe('test-key-123');
+  it('fetches todos via getTodos', async () => {
+    const mockTodos = [
+      { id: 'todo-1', title: 'Buy milk', isCompleted: false, category: 'Shopping', priority: 'MEDIUM', createdBy: 'partner_a', createdAt: '2025-01-01' },
+    ];
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => mockTodos,
     });
 
-    it('removes custom API key from localStorage when empty string is provided', () => {
-      localStorage.setItem('duospend_gemini_key', 'existing-key');
-      const removeItemSpy = vi.spyOn(Storage.prototype, 'removeItem');
-
-      saveCustomApiKey('');
-
-      expect(removeItemSpy).toHaveBeenCalledWith('duospend_gemini_key');
-      expect(localStorage.getItem('duospend_gemini_key')).toBeNull();
-    });
-
-    it('catches error and logs console.error if localStorage operations throw', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('QuotaExceededError');
-      });
-
-      expect(() => saveCustomApiKey('some-key')).not.toThrow();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to save custom API key in localStorage:',
-        expect.any(Error)
-      );
-    });
+    const todos = await api.getTodos();
+    expect(todos).toEqual(mockTodos);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos',
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
+      })
+    );
   });
 
-  describe('getSavedCustomApiKey', () => {
-    it('returns custom key from localStorage if set', () => {
-      localStorage.setItem('duospend_gemini_key', 'my-saved-key');
-      expect(getSavedCustomApiKey()).toBe('my-saved-key');
+  it('adds a todo via addTodo', async () => {
+    const newTodoInput = { title: 'Clean room', category: 'Cleaning' as const, priority: 'HIGH' as const, createdBy: 'partner_a' };
+    const createdTodo = { id: 'todo-2', ...newTodoInput, isCompleted: false, createdAt: '2025-01-01' };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => createdTodo,
     });
 
-    it('returns empty string or env key fallback if localStorage key is not set', () => {
-      const savedKey = getSavedCustomApiKey();
-      const expectedEnvKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-      expect(savedKey).toBe(expectedEnvKey);
+    const result = await api.addTodo(newTodoInput);
+    expect(result).toEqual(createdTodo);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(newTodoInput),
+      })
+    );
+  });
+
+  it('toggles a todo via toggleTodo', async () => {
+    const updatedTodo = { id: 'todo-1', title: 'Buy milk', isCompleted: true };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => updatedTodo,
     });
 
-    it('handles localStorage errors gracefully in getSavedCustomApiKey', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('SecurityError');
-      });
+    const result = await api.toggleTodo('todo-1', true);
+    expect(result).toEqual(updatedTodo);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos/todo-1/toggle',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ isCompleted: true }),
+      })
+    );
+  });
 
-      const expectedEnvKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-      expect(() => getSavedCustomApiKey()).not.toThrow();
-      expect(getSavedCustomApiKey()).toBe(expectedEnvKey);
+  it('updates a todo via updateTodo', async () => {
+    const updatedTodo = { id: 'todo-1', title: 'Buy almond milk' };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => updatedTodo,
     });
+
+    const result = await api.updateTodo('todo-1', { title: 'Buy almond milk' });
+    expect(result).toEqual(updatedTodo);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos/todo-1',
+      expect.objectContaining({
+        method: 'PATCH',
+        body: JSON.stringify({ title: 'Buy almond milk' }),
+      })
+    );
+  });
+
+  it('deletes a todo via deleteTodo', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ success: true }),
+    });
+
+    const result = await api.deleteTodo('todo-1');
+    expect(result).toEqual({ success: true });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos/todo-1',
+      expect.objectContaining({
+        method: 'DELETE',
+      })
+    );
+  });
+
+  it('clears completed todos via clearCompletedTodos', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => ({ success: true }),
+    });
+
+    const result = await api.clearCompletedTodos();
+    expect(result).toEqual({ success: true });
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/todos/completed/clear',
+      expect.objectContaining({
+        method: 'DELETE',
+      })
+    );
   });
 });
