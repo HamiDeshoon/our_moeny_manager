@@ -1,0 +1,3 @@
+## 2025-05-18 - Modal Dialog Accessibility and Keyboard Navigation in Custom Sheets
+**Learning:** In custom modal sheets (e.g. Framer Motion based bottom sheets), simply rendering overlay dialogs is insufficient for accessible UX. Without explicit `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and a global `keydown` listener for the `Escape` key, screen readers cannot properly contextualize modal dialogs and keyboard users cannot easily dismiss them.
+**Action:** Always ensure custom overlay components implement `role="dialog"`, `aria-modal="true"`, `aria-labelledby`, and an `Escape` key handler to dismiss the dialog.

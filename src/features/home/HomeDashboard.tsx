@@ -1,17 +1,25 @@
 import React from 'react';
 import { ArrowLeft, Sparkles, WalletCards } from 'lucide-react';
 import { DashboardCarousel } from './DashboardCarousel';
+import { HomeRoutinesWidget } from './HomeRoutinesWidget';
+import type { AppSettings } from '../../types';
 
 interface HomeDashboardProps {
   balances: React.ReactNode;
   budget: React.ReactNode;
   insights: React.ReactNode;
   onViewTransactions: () => void;
+  settings?: AppSettings;
+  onOpenRoutines?: () => void;
 }
 
-export function HomeDashboard({ balances, budget, insights, onViewTransactions }: HomeDashboardProps) {
+export function HomeDashboard({ balances, budget, insights, onViewTransactions, settings, onOpenRoutines }: HomeDashboardProps) {
   return (
     <div className="space-y-5">
+      {settings && onOpenRoutines ? (
+        <HomeRoutinesWidget settings={settings} onOpenRoutines={onOpenRoutines} />
+      ) : null}
+
       <DashboardCarousel
         slides={[
           <section className="space-y-4" key="balances">

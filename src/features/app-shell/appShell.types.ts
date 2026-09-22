@@ -1,4 +1,4 @@
-export type AppTab = 'home' | 'analytics' | 'couple' | 'cycle' | 'profile';
+export type AppTab = 'home' | 'routines' | 'analytics' | 'couple' | 'cycle' | 'profile';
 export type HomeView = 'dashboard' | 'transactions';
 
 export type ActiveModal =
