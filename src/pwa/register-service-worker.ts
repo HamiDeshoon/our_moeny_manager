@@ -11,7 +11,12 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    let registration: ServiceWorkerRegistration;
+    try {
+      registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    } catch {
+      registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    }
     let updateAvailable = Boolean(registration.waiting);
 
     registration.addEventListener('updatefound', () => {

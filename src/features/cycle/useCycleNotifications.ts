@@ -10,6 +10,16 @@ function toUint8Array(value: string): Uint8Array {
 
 const fallback: NotificationPreferences = { dailyLogEnabled: false, dailyLogTime: '20:00', ovulationEnabled: false, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' };
 
+function isIOS(): boolean {
+  if (typeof window === 'undefined') return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean((navigator as any).standalone || window.matchMedia('(display-mode: standalone)').matches);
+}
+
 export function useCycleNotifications(enabled: boolean) {
   const [preferences, setPreferences] = useState<NotificationPreferences>(fallback);
   const [status, setStatus] = useState<string | null>(null);
@@ -25,6 +35,10 @@ export function useCycleNotifications(enabled: boolean) {
   }, []);
 
   const enablePush = useCallback(async () => {
+    if (isIOS() && !isStandalone()) {
+      setStatus('در آیفون (iOS)، اعلانات پس‌زمینه فقط هنگامی کار می‌کنند که برنامه را به صفحه اصلی اضافه کنید (Add to Home Screen).');
+      return;
+    }
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !window.isSecureContext) { setStatus('یادآور پس‌زمینه فقط در نصب امن PWA پشتیبانی می‌شود.'); return; }
     setLoading(true); setStatus(null);
     try {
@@ -41,5 +55,5 @@ export function useCycleNotifications(enabled: boolean) {
     finally { setLoading(false); }
   }, [save]);
 
-  return { preferences, status, loading, save, enablePush };
+  return { preferences, status, loading, save, enablePush, isIOSUser: isIOS(), isStandaloneUser: isStandalone() };
 }
