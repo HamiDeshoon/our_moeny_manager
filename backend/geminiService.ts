@@ -156,22 +156,23 @@ const VALID_CATEGORIES = [
 ];
 
 function validateVoiceResult(data: AIParsedVoice): string | null {
+  if (!data.title || data.title.trim().length === 0) return 'Missing title';
+  if (data.actionType === 'ADD_TASK' || data.actionType === 'ADD_GROCERY' || data.actionType === 'ADD_HABIT') {
+    return null; // Valid non-financial routine item
+  }
   if (data.actionType === 'SET_BUDGET') {
     if (!data.category) return 'Missing category for SET_BUDGET';
     if (!data.monthlyLimit || data.monthlyLimit <= 0) return `Invalid monthlyLimit: ${data.monthlyLimit}`;
     return null;
   }
   if (data.actionType === 'ADD_RECURRING') {
-    if (!data.title || data.title.trim().length === 0) return 'Missing title for ADD_RECURRING';
     if (!data.amount || data.amount <= 0) return `Invalid amount: ${data.amount}`;
     return null;
   }
   if (data.actionType === 'ADD_BILL') {
-    if (!data.title || data.title.trim().length === 0) return 'Missing title for ADD_BILL';
     if (!data.amount || data.amount <= 0) return `Invalid amount: ${data.amount}`;
     return null;
   }
-  if (!data.title || data.title.trim().length === 0) return 'Missing title';
   if (!data.amount || data.amount <= 0) return `Invalid amount: ${data.amount}`;
   if (!data.date || !/^\d{4}-\d{2}-\d{2}$/.test(data.date)) return `Invalid date: ${data.date}`;
   if (!data.paidBy) return 'Missing paidBy';
@@ -242,10 +243,13 @@ CONTEXT:
 - Partner B: ${partnerB.name} (id: ${partnerB.id})
 
 INTENT CLASSIFICATION RULES (actionType):
-1. 'LOG_EXPENSE': One-off transaction entry (e.g. "۳۵۰ هزار تومان خرید شد").
-2. 'SET_BUDGET': User wants to change or set a monthly budget limit (e.g. "بودجه سوپرمارکت رو کن ۱۰ میلیون تومان", "set groceries budget to 500").
-3. 'ADD_RECURRING': User wants to set up a regular recurring expense rule (e.g. "هر ماه ۱۵ میلیون اجاره اضافه کن", "recurring rent 1000 every month").
-4. 'ADD_BILL': User wants to add a monthly recurring bill reminder (e.g. "قبض اینترنت ماهانه سی‌ام ۲۰۰ هزار تومان", "add internet bill due 25th").
+1. 'LOG_EXPENSE': One-off financial transaction entry (e.g. "۳۵۰ هزار تومان خرید شد").
+2. 'SET_BUDGET': User wants to change or set a monthly budget limit (e.g. "بودجه سوپرمارکت رو کن ۱۰ میلیون تومان").
+3. 'ADD_RECURRING': User wants to set up a regular recurring expense rule (e.g. "هر ماه ۱۵ میلیون اجاره اضافه کن").
+4. 'ADD_BILL': User wants to add a monthly recurring bill reminder (e.g. "قبض اینترنت ماهانه سی‌ام ۲۰۰ هزار تومان").
+5. 'ADD_TASK': User wants to add a household todo/chore (e.g. "یادآوری کن فردا آشغال‌ها رو بزارم دم در", "Remind Alex to fix the leaky sink").
+6. 'ADD_GROCERY': User wants to add a grocery/shopping list item (e.g. "شیر و پنیر بگذار تو لیست خرید", "Add milk to shopping list").
+7. 'ADD_HABIT': User wants to start or track a recurring daily/weekly habit (e.g. "عادت روزانه ورزش ۳۰ دقیقه اضافه کن", "Track daily water intake").
 
 FARSI / ENGLISH MATCHING RULES:
 - Identify who paid:
@@ -264,10 +268,10 @@ Output valid JSON matching the schema.
     properties: {
       actionType: {
         type: Type.STRING,
-        description: 'LOG_EXPENSE, SET_BUDGET, ADD_RECURRING, or ADD_BILL',
+        description: 'LOG_EXPENSE, SET_BUDGET, ADD_RECURRING, ADD_BILL, ADD_TASK, ADD_GROCERY, or ADD_HABIT',
       },
       title: { type: Type.STRING, description: 'Descriptive title' },
-      amount: { type: Type.NUMBER, description: 'Total numeric monetary amount' },
+      amount: { type: Type.NUMBER, description: 'Total numeric monetary amount (0 for non-expense tasks)' },
       category: { type: Type.STRING, description: 'Category name' },
       paidBy: { type: Type.STRING, description: `'${partnerA.id}' or '${partnerB.id}'` },
       date: { type: Type.STRING, description: 'YYYY-MM-DD date' },
@@ -277,8 +281,13 @@ Output valid JSON matching the schema.
       interval: { type: Type.STRING, description: 'MONTHLY, BI_MONTHLY, QUARTERLY, or YEARLY if actionType is ADD_RECURRING' },
       dueDateDay: { type: Type.NUMBER, description: 'Day of month (1-31) if actionType is ADD_BILL' },
       autopay: { type: Type.BOOLEAN, description: 'True if bill is on autopay' },
+      assignedTo: { type: Type.STRING, description: `'${partnerA.id}', '${partnerB.id}', or 'both'` },
+      priority: { type: Type.STRING, description: 'LOW, MEDIUM, HIGH, or URGENT' },
+      dueDate: { type: Type.STRING, description: 'YYYY-MM-DD target due date' },
+      quantity: { type: Type.STRING, description: 'Quantity string for grocery items (e.g. "2 packs", "1 kg")' },
+      frequency: { type: Type.STRING, description: 'DAILY, WEEKLY, or WEEKDAYS for habits' },
     },
-    required: ['actionType', 'title', 'amount', 'category', 'paidBy', 'date'],
+    required: ['actionType', 'title'],
   };
 
   return callGeminiWithRetry<AIParsedVoice>(

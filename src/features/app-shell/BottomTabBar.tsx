@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart3, Heart, HeartPulse, House, UserRound } from 'lucide-react';
+import { BarChart3, CheckSquare, Heart, HeartPulse, House, UserRound } from 'lucide-react';
 import type { AppTab } from './appShell.types';
 
 interface BottomTabBarProps {
@@ -9,6 +9,7 @@ interface BottomTabBarProps {
 
 const tabs: Array<{ id: AppTab; label: string; icon: typeof House }> = [
   { id: 'home', label: 'خانه', icon: House },
+  { id: 'routines', label: 'روتین‌ها', icon: CheckSquare },
   { id: 'analytics', label: 'تحلیل', icon: BarChart3 },
   { id: 'couple', label: 'دونفره', icon: Heart },
   { id: 'cycle', label: 'چرخه', icon: HeartPulse },
@@ -18,7 +19,7 @@ const tabs: Array<{ id: AppTab; label: string; icon: typeof House }> = [
 export function BottomTabBar({ activeTab, onChange }: BottomTabBarProps) {
   return (
     <nav aria-label="ناوبری اصلی" className="bottom-tab-bar fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0b1210]/95 pt-2 backdrop-blur-xl">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
+      <div className="mx-auto grid max-w-md grid-cols-6 gap-0.5">
         {tabs.map(({ id, label, icon: Icon }) => {
           const active = activeTab === id;
           return (
