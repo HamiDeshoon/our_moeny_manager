@@ -258,6 +258,17 @@ export const api = {
   deletePushSubscription: (endpoint: string) =>
     fetchJSON<{ success: boolean }>('/push/subscriptions', { method: 'DELETE', body: JSON.stringify({ endpoint }) }),
 
+  // Habits & Habit Logs
+  getHabits: () => fetchJSON<import('../types').Habit[]>('/habits'),
+  addHabit: (habit: Omit<import('../types').Habit, 'id' | 'createdAt'>) => fetchJSON<import('../types').Habit>('/habits', { method: 'POST', body: JSON.stringify(habit) }),
+  deleteHabit: (id: string) => fetchJSON<{ success: boolean }>(`/habits/${id}`, { method: 'DELETE' }),
+  getHabitLogs: (date?: string) => fetchJSON<import('../types').HabitLog[]>(`/habit-logs${date ? `?date=${date}` : ''}`),
+  toggleHabitLog: (habitId: string, date: string) => fetchJSON<{ completed: boolean; log?: import('../types').HabitLog }>('/habit-logs/toggle', { method: 'POST', body: JSON.stringify({ habitId, date }) }),
+
+  // Couple Daily Check-ins
+  getCoupleCheckins: (date?: string) => fetchJSON<import('../types').CoupleCheckin[]>(`/checkins${date ? `?date=${date}` : ''}`),
+  saveCoupleCheckin: (checkin: { date: string; mood: string; appreciationNote?: string }) => fetchJSON<import('../types').CoupleCheckin>('/checkins', { method: 'POST', body: JSON.stringify(checkin) }),
+
   // Backup & Google Drive Data Sync
   exportBackup: () => fetchJSON<any>('/backup/export'),
   importBackup: (backup: any) =>

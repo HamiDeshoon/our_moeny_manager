@@ -405,6 +405,67 @@ apiRouter.delete('/cycle/logs/:date', async (req, res) => {
   } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
+// Habits
+apiRouter.get('/habits', async (_req, res) => {
+  try {
+    res.json(await (db as any).getHabits());
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/habits', async (req: any, res) => {
+  try {
+    const habit = req.body;
+    if (!habit || !habit.title) return res.status(400).json({ error: 'Title is required' });
+    const createdBy = req.authUser || habit.createdBy || 'partner_a';
+    const saved = await (db as any).addHabit({ ...habit, createdBy });
+    res.json(saved);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.delete('/habits/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const success = await (db as any).deleteHabit(id);
+    res.json({ success });
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+// Habit Logs
+apiRouter.get('/habit-logs', async (req, res) => {
+  try {
+    const date = req.query.date as string | undefined;
+    res.json(await (db as any).getHabitLogs(date));
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/habit-logs/toggle', async (req: any, res) => {
+  try {
+    const { habitId, date } = req.body;
+    if (!habitId || !date) return res.status(400).json({ error: 'habitId and date are required' });
+    const completedBy = req.authUser || 'partner_a';
+    const result = await (db as any).toggleHabitLog(habitId, date, completedBy);
+    res.json(result);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+// Couple Daily Check-ins
+apiRouter.get('/checkins', async (req, res) => {
+  try {
+    const date = req.query.date as string | undefined;
+    res.json(await (db as any).getCoupleCheckins(date));
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
+apiRouter.post('/checkins', async (req: any, res) => {
+  try {
+    const checkin = req.body;
+    if (!checkin || !checkin.date || !checkin.mood) return res.status(400).json({ error: 'date and mood are required' });
+    const partnerId = req.authUser === 'fati' || req.authUser === 'fatemeh' ? 'partner_b' : 'partner_a';
+    const saved = await (db as any).saveCoupleCheckin({ ...checkin, partnerId });
+    res.json(saved);
+  } catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
+});
+
 apiRouter.get('/cycle/settings', async (_req, res) => {
   try {
     const settings = await db.getCycleSettings();
