@@ -143,7 +143,7 @@ const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 // PostgreSQL Database Layer
 // ──────────────────────────────────────────────
 
-class PostgresDB {
+export class PostgresDB {
   private pool: Pool;
   private ready: Promise<void>;
 
@@ -470,10 +470,53 @@ class PostgresDB {
 
   async batchAddTransactions(items: Omit<Transaction, 'id' | 'createdAt'>[]): Promise<Transaction[]> {
     await this.ensureReady();
+    if (items.length === 0) return [];
+
+    const BATCH_SIZE = 500;
     const created: Transaction[] = [];
-    for (const tx of items) {
-      created.push(await this.addTransaction(tx));
+
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      const chunk = items.slice(i, i + BATCH_SIZE);
+      const values: any[] = [];
+      const valueTuples: string[] = [];
+      let paramIdx = 1;
+
+      for (const tx of chunk) {
+        const id = genId('tx');
+        const createdAt = new Date().toISOString();
+        const fullTx: Transaction = { ...tx, id, createdAt } as Transaction;
+        created.push(fullTx);
+
+        valueTuples.push(
+          `($${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++})`
+        );
+
+        values.push(
+          id,
+          tx.title,
+          tx.amount,
+          tx.type || 'EXPENSE',
+          tx.category,
+          tx.paidBy,
+          tx.date,
+          tx.notes || null,
+          tx.vendor || null,
+          tx.receiptUrl || null,
+          tx.isRecurring || false,
+          tx.recurringDay || null,
+          tx.recurringFrequency || null,
+          createdAt
+        );
+      }
+
+      const query = `
+        INSERT INTO transactions (id, title, amount, type, category, paid_by, date, notes, vendor, receipt_url, is_recurring, recurring_day, recurring_frequency, created_at)
+        VALUES ${valueTuples.join(', ')}
+      `;
+
+      await this.pool.query(query, values);
     }
+
     return created;
   }
 
@@ -508,29 +551,45 @@ class PostgresDB {
     await this.ensureReady();
     if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) return [];
 
-    const recurringTemplates = (await this.getTransactions()).filter(t => t.isRecurring);
+    const templateRes = await this.pool.query('SELECT * FROM transactions WHERE is_recurring = true');
+    if (templateRes.rows.length === 0) return [];
+
+    const recurringTemplates = templateRes.rows.map(r => this.rowToTx(r));
     const uniqueTemplates = new Map<string, Transaction>();
     for (const t of recurringTemplates) {
       if (!uniqueTemplates.has(t.title)) uniqueTemplates.set(t.title, t);
     }
 
-    const added: Transaction[] = [];
+    if (uniqueTemplates.size === 0) return [];
+
+    const existingRes = await this.pool.query(
+      'SELECT DISTINCT title FROM transactions WHERE date LIKE $1',
+      [`${targetMonth}-%`]
+    );
+    const existingTitles = new Set<string>(existingRes.rows.map(r => r.title));
+
+    const toAdd: Omit<Transaction, 'id' | 'createdAt'>[] = [];
     for (const template of uniqueTemplates.values()) {
-      const dayNum = template.recurringDay || 1;
-      const formattedDay = String(dayNum).padStart(2, '0');
-      const newDate = `${targetMonth}-${formattedDay}`;
-      const exists = (await this.pool.query('SELECT 1 FROM transactions WHERE title = $1 AND date LIKE $2', [template.title, `${targetMonth}-%`])).rowCount ?? 0 > 0;
-      if (!exists) {
-        const newTx = await this.addTransaction({
-          title: template.title, amount: template.amount, type: template.type || 'EXPENSE',
-          category: template.category, paidBy: template.paidBy, date: newDate,
-          vendor: template.vendor, notes: template.notes ? `${template.notes} (Auto Recurring)` : 'Auto generated monthly recurring',
+      if (!existingTitles.has(template.title)) {
+        const dayNum = template.recurringDay || 1;
+        const formattedDay = String(dayNum).padStart(2, '0');
+        const newDate = `${targetMonth}-${formattedDay}`;
+        toAdd.push({
+          title: template.title,
+          amount: template.amount,
+          type: template.type || 'EXPENSE',
+          category: template.category,
+          paidBy: template.paidBy,
+          date: newDate,
+          vendor: template.vendor,
+          notes: template.notes ? `${template.notes} (Auto Recurring)` : 'Auto generated monthly recurring',
           isRecurring: false,
         });
-        added.push(newTx);
       }
     }
-    return added;
+
+    if (toAdd.length === 0) return [];
+    return await this.batchAddTransactions(toAdd);
   }
 
   // ── Budgets ──
@@ -1213,7 +1272,7 @@ class PostgresDB {
 // Local JSON Database Layer
 // ──────────────────────────────────────────────
 
-class LocalFileDB {
+export class LocalFileDB {
   private store: StoreData;
 
   constructor() {
@@ -1369,13 +1428,20 @@ class LocalFileDB {
       if (!uniqueTemplates.has(tx.title)) uniqueTemplates.set(tx.title, tx);
     }
 
-    const added: Transaction[] = [];
+    if (uniqueTemplates.size === 0) return [];
+
+    const existingTitles = new Set(
+      this.store.transactions
+        .filter(tx => matchesMonth(tx.date, targetMonth))
+        .map(tx => tx.title)
+    );
+
+    const toAdd: Omit<Transaction, 'id' | 'createdAt'>[] = [];
     for (const template of uniqueTemplates.values()) {
-      const dayNum = template.recurringDay || 1;
-      const date = `${targetMonth}-${String(dayNum).padStart(2, '0')}`;
-      const exists = this.store.transactions.some(tx => tx.title === template.title && matchesMonth(tx.date, targetMonth));
-      if (!exists) {
-        added.push(await this.addTransaction({
+      if (!existingTitles.has(template.title)) {
+        const dayNum = template.recurringDay || 1;
+        const date = `${targetMonth}-${String(dayNum).padStart(2, '0')}`;
+        toAdd.push({
           title: template.title,
           amount: template.amount,
           type: template.type || 'EXPENSE',
@@ -1385,10 +1451,12 @@ class LocalFileDB {
           vendor: template.vendor,
           notes: template.notes ? `${template.notes} (Auto Recurring)` : 'Auto generated monthly recurring',
           isRecurring: false,
-        }));
+        });
       }
     }
-    return added;
+
+    if (toAdd.length === 0) return [];
+    return await this.batchAddTransactions(toAdd);
   }
 
   async getBudgets(): Promise<Budget[]> {
