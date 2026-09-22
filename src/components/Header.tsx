@@ -171,6 +171,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenSettings}
               className="p-1.5 sm:p-2 text-zinc-400 hover:text-zinc-200 bg-black/40 hover:bg-black/60 rounded-lg transition border border-white/10 cursor-pointer shrink-0"
               title="Settings & Gemini API Key"
+              aria-label="تنظیمات"
             >
               <Settings className="w-4 h-4" />
             </button>
@@ -271,6 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenVoiceModal}
               className="p-1.5 sm:p-2 bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/20 cursor-pointer"
               title="Voice Memo"
+              aria-label="یادداشت صوتی"
             >
               <Mic className="w-4 h-4" />
             </button>
@@ -278,6 +280,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={onOpenReceiptModal}
               className="p-1.5 sm:p-2 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20 cursor-pointer"
               title="Scan Receipt with Gemini Vision"
+              aria-label="اسکن فاکتور"
             >
               <Camera className="w-4 h-4" />
             </button>
