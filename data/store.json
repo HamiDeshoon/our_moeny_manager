@@ -1,6 +1,6 @@
 {
   "settings": {
-    "geminiApiKey": "Gemini API key is missing. Set GEMINI_API_KEY env variable or enter your key in Settings.",
+    "geminiApiKey": "",
     "currencySymbol": "تومان",
     "partnerA": {
       "id": "partner_a",
@@ -58,5 +58,32 @@
     }
   ],
   "bills": [],
-  "recurringExpenses": []
+  "recurringExpenses": [],
+  "cycleLogs": [],
+  "cycleSettings": {
+    "cycleLength": 28,
+    "periodLength": 5,
+    "lutealLength": 14,
+    "lastPeriodStart": "",
+    "trackPartnerId": "partner_b",
+    "partnerNotes": "چرخه سلامت و تقویم قاعدگی"
+  },
+  "groceryItems": [],
+  "todos": [
+    {
+      "title": "تست کار جدید",
+      "category": "Cleaning",
+      "priority": "MEDIUM",
+      "createdBy": "hamid",
+      "id": "todo-1790109029289-0yrbw",
+      "isCompleted": false,
+      "createdAt": "2026-09-22T20:30:29.289Z"
+    }
+  ],
+  "coupleNotes": [],
+  "wishGoals": [],
+  "importantDates": [],
+  "pushSubscriptions": [],
+  "notificationPreferences": {},
+  "notificationDeliveries": []
 }

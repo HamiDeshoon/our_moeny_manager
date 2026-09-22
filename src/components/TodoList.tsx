@@ -87,10 +87,22 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
     );
 
     try {
-      await api.updateTodo(todo.id, { isCompleted: newCompleted });
+      await api.toggleTodo(todo.id, newCompleted);
       if (newCompleted) haptic('success');
     } catch (err) {
       console.error('Failed to update todo', err);
+      loadTodos();
+    }
+  };
+
+  const handleClearCompleted = async () => {
+    haptic('warning');
+    setTodos((prev) => prev.filter((t) => !t.isCompleted));
+    try {
+      await api.clearCompletedTodos();
+      haptic('success');
+    } catch (err) {
+      console.error('Failed to clear completed todos', err);
       loadTodos();
     }
   };
@@ -328,16 +340,26 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
       {/* Completed Tasks Accordion */}
       {completedTodos.length > 0 && (
         <div className="pt-4 border-t border-white/5">
-          <button
-            onClick={() => setShowCompleted(!showCompleted)}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-xs text-zinc-400 font-bold transition"
-          >
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>کارهای انجام شده ({completedTodos.length})</span>
-            </div>
-            {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => setShowCompleted(!showCompleted)}
+              className="flex-1 flex items-center justify-between p-3 rounded-xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/5 text-xs text-zinc-400 font-bold transition"
+            >
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <span>کارهای انجام شده ({completedTodos.length})</span>
+              </div>
+              {showCompleted ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={handleClearCompleted}
+              className="p-3 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition shrink-0"
+              title="پاک‌سازی همه انجام‌شده‌ها"
+            >
+              پاک‌سازی
+            </button>
+          </div>
 
           {showCompleted && (
             <div className="space-y-2 mt-3">

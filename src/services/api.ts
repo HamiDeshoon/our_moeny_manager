@@ -224,8 +224,10 @@ export const api = {
   // Todos
   getTodos: () => fetchJSON<TodoItem[]>('/todos'),
   addTodo: (item: Omit<TodoItem,'id'|'createdAt'|'isCompleted'>) => fetchJSON<TodoItem>('/todos', { method:'POST', body:JSON.stringify(item) }),
+  toggleTodo: (id: string, isCompleted: boolean) => fetchJSON<TodoItem>(`/todos/${id}/toggle`, { method: 'PATCH', body: JSON.stringify({ isCompleted }) }),
   updateTodo: (id:string, updates:Partial<TodoItem>) => fetchJSON<TodoItem>(`/todos/${id}`, { method:'PATCH', body:JSON.stringify(updates) }),
   deleteTodo: (id:string) => fetchJSON<{success:boolean}>(`/todos/${id}`, { method:'DELETE' }),
+  clearCompletedTodos: () => fetchJSON<{success:boolean}>('/todos/completed/clear', { method:'DELETE' }),
 
   // Notes
   getCoupleNotes: () => fetchJSON<CoupleNote[]>('/notes'),
