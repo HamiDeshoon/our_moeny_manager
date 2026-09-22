@@ -152,12 +152,27 @@ const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 export class PostgresDB {
   private pool: Pool;
   private ready: Promise<void>;
+  private initError: Error | null = null;
 
   constructor() {
-    const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED;
+    let dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.DATABASE_URL_UNPOOLED || process.env.SUPABASE_URL || process.env.SUPABASE_DB_URL;
     if (!dbUrl) {
       throw new Error('Database connection is not configured. Set DATABASE_URL or DATABASE_URL_UNPOOLED.');
     }
+
+    // Clean up potential quote wrapping or trailing spaces
+    dbUrl = dbUrl.trim().replace(/^["']|["']$/g, '');
+
+    // If an HTTPS Supabase URL (e.g. https://xyz.supabase.co) was provided without postgresql://, throw clear error
+    if (dbUrl.startsWith('http://') || dbUrl.startsWith('https://')) {
+      const err = new Error('آدرس Supabase وارد شده یک URL وب است (HTTP/HTTPS). لطفا رشته اتصال PostgreSQL (Postgres Connection String) را از Supabase در DATABASE_URL قرار دهید.');
+      this.initError = err;
+      this.ready = Promise.reject(err);
+      this.ready.catch(() => {});
+      this.pool = new Pool({ connectionString: 'postgres://invalid:invalid@localhost:5432/invalid' });
+      return;
+    }
+
     const isLocal = dbUrl.includes('localhost') || dbUrl.includes('127.0.0.1');
     this.pool = new Pool({
       connectionString: dbUrl,
@@ -170,12 +185,18 @@ export class PostgresDB {
 
     this.ready = this.init().catch(err => {
       console.error('[PostgresDB] Initialization connection failed:', err);
-      throw new Error('Database initialization failed. Check the Neon connection and migrations.', { cause: err });
+      const customErr = new Error('اتصال به پایگاه داده با خطا مواجه شد. لطفا صحت DATABASE_URL و دسترسی به Supabase/PostgreSQL را بررسی کنید.', { cause: err });
+      this.initError = customErr;
+      throw customErr;
     });
   }
 
   getStorageMode(): 'postgresql' | 'local_file' {
     return 'postgresql';
+  }
+
+  getInitError(): Error | null {
+    return this.initError;
   }
 
   private async init() {
@@ -448,7 +469,12 @@ export class PostgresDB {
     }
   }
 
-  private async ensureReady() { await this.ready; }
+  private async ensureReady() {
+    if (this.initError) {
+      throw this.initError;
+    }
+    await this.ready;
+  }
 
   private rowToTx(row: any): Transaction {
     return {
@@ -2143,4 +2169,12 @@ export class LocalFileDB {
 // Export: PostgreSQL when configured, otherwise local JSON fallback
 // ──────────────────────────────────────────────
 
-export const db = (process.env.DATABASE_URL || process.env.POSTGRES_URL) ? new PostgresDB() : new LocalFileDB();
+const hasDbConfig = Boolean(
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL_UNPOOLED ||
+  process.env.SUPABASE_URL ||
+  process.env.SUPABASE_DB_URL
+);
+
+export const db = hasDbConfig ? new PostgresDB() : new LocalFileDB();
