@@ -189,6 +189,23 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
       .reduce((acc, l) => acc + l.monthlyAmount, 0);
   }, [loans]);
 
+  // Total active monthly recurring cost calculation
+  const totalMonthlyRecurringCost = useMemo(() => {
+    return recurringExpenses
+      .filter((r) => r.isActive)
+      .reduce((acc, r) => {
+        let monthlyEquivalent = r.amount;
+        if (r.interval === 'BI_MONTHLY') monthlyEquivalent = r.amount / 2;
+        else if (r.interval === 'QUARTERLY') monthlyEquivalent = r.amount / 3;
+        else if (r.interval === 'YEARLY') monthlyEquivalent = r.amount / 12;
+        return acc + monthlyEquivalent;
+      }, 0);
+  }, [recurringExpenses]);
+
+  const activeRecurringCount = useMemo(() => {
+    return recurringExpenses.filter((r) => r.isActive).length;
+  }, [recurringExpenses]);
+
   const handleLimitChange = (category: string, newLimit: string) => {
     const val = parseFloat(newLimit) || 0;
     setEditedBudgets((prev) =>
@@ -893,6 +910,40 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
       {/* ======================================================== */}
       {activeTab === 'recurring' && (
         <div className="space-y-4">
+          {/* Summary Box */}
+          <div className="rounded-[1.5rem] border border-amber-400/20 bg-gradient-to-br from-[#281f14] to-[#18130c] p-4 shadow-xl shadow-black/30">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-amber-300">
+                <Repeat className="h-4 w-4 text-amber-400" />
+                <span className="text-xs font-bold">خلاصه هزینه‌ها و اشتراک‌های مکرر</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddRecurring(!showAddRecurring)}
+                className="flex items-center gap-1 bg-amber-500 text-black font-bold text-xs px-3 py-1.5 rounded-xl hover:bg-amber-400 transition shadow-md"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>هزینه دوره‌ای</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="rounded-xl bg-black/25 p-3 border border-white/5">
+                <p className="text-[10px] text-zinc-400">مجموع تعهد ماهانه (معادل)</p>
+                <p className="text-base font-extrabold text-amber-200 mt-1">
+                  {formatMoney(totalMonthlyRecurringCost, symbol)}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-black/25 p-3 border border-white/5">
+                <p className="text-[10px] text-zinc-400">اشتراک‌های فعال</p>
+                <p className="text-base font-extrabold text-white mt-1">
+                  {activeRecurringCount} مورد
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between px-1">
             <div>
               <h3 className="text-xs font-bold text-zinc-300">پرداخت‌های مکرر و اشتراک‌ها</h3>
@@ -908,15 +959,6 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
               >
                 <Repeat className="w-3.5 h-3.5" />
                 <span>{isProcessingDue ? 'بررسی...' : 'ثبت خودکار این ماه'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowAddRecurring(!showAddRecurring)}
-                className="flex items-center gap-1 bg-amber-500 text-black font-bold text-xs px-3 py-1.5 rounded-xl hover:bg-amber-400 transition shadow-md"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>هزینه دوره‌ای</span>
               </button>
             </div>
           </div>
@@ -981,6 +1023,40 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                     <option value="YEARLY">سالانه</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">مسئول پرداخت</label>
+                  <select
+                    value={recPaidBy}
+                    onChange={(e) => setRecPaidBy(e.target.value)}
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                  >
+                    <option value={settings.partnerA?.id || 'partner_a'}>{settings.partnerA?.name || 'کاربر اول'}</option>
+                    <option value={settings.partnerB?.id || 'partner_b'}>{settings.partnerB?.name || 'کاربر دوم'}</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-zinc-400 block mb-1">تاریخ شروع پرداخت</label>
+                  <input
+                    type="date"
+                    required
+                    value={recStartDate}
+                    onChange={(e) => setRecStartDate(e.target.value)}
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-zinc-400 block mb-1">یادداشت و توضیحات (اختیاری)</label>
+                <input
+                  type="text"
+                  placeholder="مثال: اشتراک خانوادگی، شماره حساب یا اشتراک"
+                  value={recNotes}
+                  onChange={(e) => setRecNotes(e.target.value)}
+                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-amber-400"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
@@ -1025,54 +1101,86 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                 return (
                   <div
                     key={rec.id}
-                    className={`rounded-2xl border p-3.5 flex items-center justify-between gap-3 transition ${
-                      rec.isActive ? 'bg-black/20 border-white/10' : 'bg-white/5 border-white/5 opacity-50'
+                    className={`rounded-2xl border p-3.5 transition-all ${
+                      rec.isActive
+                        ? 'bg-black/25 border-white/10 hover:border-white/15'
+                        : 'bg-white/5 border-white/5 opacity-60'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xl">{info.icon}</span>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs font-bold text-white">{rec.title}</p>
-                          <span className="text-[10px] bg-amber-500/10 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">
-                            {intervalFa}
-                          </span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl p-2 rounded-xl bg-white/5 border border-white/5">
+                          {info.icon}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-xs font-bold text-white">{rec.title}</p>
+                            <span className="text-[10px] bg-amber-500/10 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/20">
+                              {intervalFa}
+                            </span>
+                            {!rec.isActive && (
+                              <span className="text-[10px] bg-zinc-500/20 text-zinc-400 px-2 py-0.5 rounded-full">
+                                غیرفعال
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 text-[11px] text-zinc-400 mt-1 flex-wrap">
+                            <span>
+                              پرداخت‌کننده: <strong className="text-zinc-200">{payer?.name || 'کاربر'}</strong>
+                            </span>
+                            {rec.startDate && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1 font-mono">
+                                  <Calendar className="w-3 h-3 text-amber-400 inline" />
+                                  <span>شروع: {rec.startDate}</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">
-                          پرداخت‌کننده: {payer?.name || 'کاربر'}
-                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-left">
+                        <div>
+                          <p className="text-sm font-extrabold text-amber-300 font-mono text-left">
+                            {formatMoney(rec.amount, symbol)}
+                          </p>
+                          <p className="text-[10px] text-zinc-500 text-left">{info.fa}</p>
+                        </div>
+
+                        <div className="flex items-center gap-1 mr-1">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActiveRecurring(rec.id, rec.isActive)}
+                            title={rec.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
+                            className={`p-1.5 rounded-lg transition ${
+                              rec.isActive
+                                ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30'
+                                : 'bg-white/5 text-zinc-500 hover:text-white'
+                            }`}
+                          >
+                            <Power className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRecurring(rec.id)}
+                            title="حذف"
+                            className="p-1.5 text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-extrabold text-white font-mono">
-                        {formatMoney(rec.amount, symbol)}
-                      </span>
-
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActiveRecurring(rec.id, rec.isActive)}
-                          title={rec.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
-                          className={`p-1.5 rounded-lg transition ${
-                            rec.isActive
-                              ? 'bg-teal-500/20 text-teal-300'
-                              : 'bg-white/5 text-zinc-500 hover:text-white'
-                          }`}
-                        >
-                          <Power className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteRecurring(rec.id)}
-                          title="حذف"
-                          className="p-1.5 text-zinc-500 hover:text-rose-400 rounded-lg transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
+                    {rec.notes && (
+                      <p className="mt-2 text-[10px] text-zinc-400 bg-black/20 p-2 rounded-lg border border-white/5">
+                        {rec.notes}
+                      </p>
+                    )}
                   </div>
                 );
               })
