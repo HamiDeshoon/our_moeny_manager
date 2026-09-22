@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Check, Trash2, Calendar, AlertCircle, Clock, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Check, Trash2, Clock, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { AppSettings, AuthUser, TodoCategory, TodoItem, TodoPriority } from '../types';
 import { api } from '../services/api';
 import { haptic } from '../utils/haptics';
@@ -8,6 +8,7 @@ import { formatJalaliDate } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
+import { useListManager } from '../hooks/useListManager';
 
 interface TodoListProps {
   settings: AppSettings;
@@ -33,8 +34,6 @@ const PRIORITIES: { id: TodoPriority; label: string; color: string; bg: string }
 ];
 
 export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => {
-  const [todos, setTodos] = useState<TodoItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | 'MINE' | 'PARTNER' | 'OVERDUE' | 'COMPLETED'>('ALL');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -52,47 +51,38 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
   const myPartnerId = currentUser?.partnerId || 'partner_a';
   const otherPartnerId = myPartnerId === 'partner_a' ? 'partner_b' : 'partner_a';
 
-  const loadTodos = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getTodos();
-      setTodos(data);
-    } catch (err) {
-      console.error('Failed to load todos', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const fetchTodos = useCallback(() => api.getTodos(), []);
 
-  useEffect(() => {
-    loadTodos();
-  }, []);
+  const { items: todos, loading, updateItemOptimistic, addItem } = useListManager<TodoItem>({
+    fetchItems: fetchTodos,
+    onError: (err, action) => {
+      console.error(`Failed during todo list ${action}`, err);
+    },
+  });
 
   const todayStr = new Date().toISOString().split('T')[0];
 
   const handleToggle = async (todo: TodoItem) => {
     haptic('light');
     const newCompleted = !todo.isCompleted;
-    setTodos((prev) =>
-      prev.map((t) =>
-        t.id === todo.id
-          ? {
-              ...t,
-              isCompleted: newCompleted,
-              completedAt: newCompleted ? new Date().toISOString() : undefined,
-              completedBy: newCompleted ? myPartnerId : undefined,
-            }
-          : t
-      )
-    );
 
-    try {
-      await api.toggleTodo(todo.id, newCompleted);
-      if (newCompleted) haptic('success');
-    } catch (err) {
-      console.error('Failed to update todo', err);
-      loadTodos();
-    }
+    await updateItemOptimistic(
+      (prev) =>
+        prev.map((t) =>
+          t.id === todo.id
+            ? {
+                ...t,
+                isCompleted: newCompleted,
+                completedAt: newCompleted ? new Date().toISOString() : undefined,
+                completedBy: newCompleted ? myPartnerId : undefined,
+              }
+            : t
+        ),
+      async () => {
+        await api.updateTodo(todo.id, { isCompleted: newCompleted });
+        if (newCompleted) haptic('success');
+      }
+    );
   };
 
   const handleClearCompleted = async () => {
@@ -110,13 +100,11 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     haptic('warning');
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-    try {
-      await api.deleteTodo(id);
-    } catch (err) {
-      console.error('Failed to delete todo', err);
-      loadTodos();
-    }
+
+    await updateItemOptimistic(
+      (prev) => prev.filter((t) => t.id !== id),
+      () => api.deleteTodo(id)
+    );
   };
 
   const handleCreateTodo = async (e: React.FormEvent) => {
@@ -125,17 +113,18 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
 
     haptic('medium');
     try {
-      const newTodo = await api.addTodo({
-        title: title.trim(),
-        description: description.trim() || undefined,
-        category,
-        priority,
-        dueDate: dueDate || undefined,
-        assignedTo: assignedTo || undefined,
-        createdBy: myPartnerId,
-      });
+      await addItem(() =>
+        api.addTodo({
+          title: title.trim(),
+          description: description.trim() || undefined,
+          category,
+          priority,
+          dueDate: dueDate || undefined,
+          assignedTo: assignedTo || undefined,
+          createdBy: myPartnerId,
+        })
+      );
 
-      setTodos((prev) => [newTodo, ...prev]);
       setTitle('');
       setDescription('');
       setCategory('Cleaning');
@@ -145,7 +134,7 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
       setIsAddOpen(false);
       haptic('success');
     } catch (err) {
-      console.error('Failed to create todo', err);
+      // Error handled by hook or catch block
     }
   };
 
