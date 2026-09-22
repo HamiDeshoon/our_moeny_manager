@@ -473,9 +473,9 @@ export default function App() {
   return (
     <div
       dir={activeSettings.isRtl ? 'rtl' : 'ltr'}
-      className="app-mobile-shell mx-auto max-w-md overflow-x-hidden bg-[#0b1210] text-zinc-100"
+      className="app-mobile-shell mx-auto min-h-screen max-w-md overflow-x-hidden bg-[#f4f1e9] text-[#161c19]"
     >
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/5 bg-[#0b1210]/92 px-4 py-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-black/10 bg-[#f4f1e9]/92 px-4 py-3 backdrop-blur-xl">
         <div>
           <p className="text-[11px] font-bold tracking-wide text-teal-300">DUOSPEND</p>
           <h1 className="text-sm font-bold text-white">مدیریت مشترک خانه</h1>

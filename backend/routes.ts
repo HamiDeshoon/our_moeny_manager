@@ -71,7 +71,8 @@ apiRouter.post('/auth/login', async (req, res) => {
     let profile: any = null;
     if (u === 'hamid') { hash = process.env.AUTH_HAMID_HASH || null; profile = { username:'hamid', name:'کاربر اول', partnerId:'partner_a', avatar:'👨‍💼' }; }
     else if (u === 'fati'||u === 'fatemeh') { hash = process.env.AUTH_FATI_HASH || null; profile = { username:'fati', name:'کاربر دوم', partnerId:'partner_b', avatar:'👩‍⚕️' }; }
-    if (!hash) { await bcrypt.compare('x','$2b$12$invalidhashfortimingprotection000000000000000000000000'); return res.status(401).json({ error: 'نام کاربری یا رمز عبور اشتباه است' }); }
+    if (!profile) return res.status(401).json({ error: 'نام کاربری یا رمز عبور اشتباه است' });
+    if (!hash) return res.status(503).json({ error: 'ورود هنوز پیکربندی نشده است. مدیر سایت باید رمزهای ورود را در تنظیمات محیطی ثبت کند.' });
     if (!await bcrypt.compare(p, hash)) return res.status(401).json({ error: 'نام کاربری یا رمز عبور اشتباه است' });
     return res.json({ success: true, user: profile });
   } catch(err:any) { res.status(500).json({ error: err.message }); }

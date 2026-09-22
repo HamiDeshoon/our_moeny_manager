@@ -42,15 +42,15 @@ export const AuthGate: React.FC<AuthGateProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950 px-4 overflow-hidden" dir="rtl">
-      {/* Subtle radial background glow */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(79,70,229,0.15)_0,transparent_70%)] pointer-events-none" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#f4f1e9] px-4" dir="rtl">
+      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[#dff44f]/60 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-[#ff9b66]/30 blur-3xl" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-sm rounded-3xl bg-zinc-900/90 border border-white/10 p-7 shadow-2xl backdrop-blur-xl"
+        className="relative w-full max-w-sm rounded-[2rem] border border-black/10 bg-[#fffdf8]/95 p-7 text-[#161c19] shadow-2xl backdrop-blur-xl"
       >
         {/* App Logo & Header */}
         <div className="text-center mb-6">

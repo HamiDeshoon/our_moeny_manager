@@ -3,24 +3,24 @@
 @theme {
   --font-vazirmatn: 'Vazirmatn', 'Plus Jakarta Sans', system-ui, sans-serif;
   --font-sans: 'Vazirmatn', 'Plus Jakarta Sans', system-ui, sans-serif;
-  --color-surface: #071311;
-  --color-surface-hover: #10231f;
-  --color-surface-elevated: #11241f;
-  --color-surface-elevated-hover: #18352d;
-  --color-border-subtle: rgba(174, 231, 211, 0.12);
-  --color-border-strong: rgba(174, 231, 211, 0.24);
-  --color-text-primary: #effcf7;
-  --color-text-secondary: #a5c0b7;
-  --color-text-tertiary: #6d8b81;
-  --color-brand-primary: #32c79a;
-  --color-brand-primary-hover: #52d9af;
-  --color-brand-secondary: #7dd3fc;
-  --shadow-premium-sm: 0 1px 2px rgba(0,0,0,.28), 0 0 0 1px rgba(174,231,211,.05);
-  --shadow-premium-md: 0 12px 30px rgba(0,0,0,.2), 0 0 0 1px rgba(174,231,211,.06);
-  --shadow-premium-lg: 0 20px 50px rgba(0,0,0,.3), 0 0 0 1px rgba(174,231,211,.08);
+  --color-surface: #f4f1e9;
+  --color-surface-hover: #ebe7dc;
+  --color-surface-elevated: #fffdf8;
+  --color-surface-elevated-hover: #f4f0e7;
+  --color-border-subtle: rgba(22, 28, 25, 0.12);
+  --color-border-strong: rgba(22, 28, 25, 0.24);
+  --color-text-primary: #161c19;
+  --color-text-secondary: #5e665f;
+  --color-text-tertiary: #8b918a;
+  --color-brand-primary: #dff44f;
+  --color-brand-primary-hover: #e9fa70;
+  --color-brand-secondary: #9db1b8;
+  --shadow-premium-sm: 0 1px 2px rgba(22,28,25,.08), 0 0 0 1px rgba(22,28,25,.04);
+  --shadow-premium-md: 0 14px 34px rgba(22,28,25,.10), 0 0 0 1px rgba(22,28,25,.06);
+  --shadow-premium-lg: 0 24px 60px rgba(22,28,25,.14), 0 0 0 1px rgba(22,28,25,.08);
 }
 
-:root { --safe-top: env(safe-area-inset-top,0px); --safe-right: env(safe-area-inset-right,0px); --safe-bottom: env(safe-area-inset-bottom,0px); --safe-left: env(safe-area-inset-left,0px); --duo-ink:#e7f2ed; --duo-canvas:#071311; --duo-panel:#11241f; --duo-teal:#32c79a; --duo-period:#fb7185; --duo-fertile:#7acb8a; --duo-ovulation:#b391ee; --duo-safe:#6d8b81; color-scheme:dark; }
+:root { --safe-top: env(safe-area-inset-top,0px); --safe-right: env(safe-area-inset-right,0px); --safe-bottom: env(safe-area-inset-bottom,0px); --safe-left: env(safe-area-inset-left,0px); --duo-ink:#161c19; --duo-canvas:#f4f1e9; --duo-panel:#fffdf8; --duo-teal:#9caf2f; --duo-period:#c35d4a; --duo-fertile:#7f9e7b; --duo-ovulation:#8c79b2; --duo-safe:#8b918a; color-scheme:light; }
 html, body, #root { min-height:100dvh; }
 html { scroll-padding-top:112px; background:var(--duo-canvas); }
 body { margin:0; overflow-x:hidden; background:radial-gradient(circle at 85% 0%, rgba(50,199,154,.10), transparent 28rem), var(--duo-canvas); color:var(--color-text-primary); font-family:var(--font-vazirmatn); -webkit-font-smoothing:antialiased; text-wrap:pretty; }
