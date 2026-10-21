@@ -1441,10 +1441,162 @@ export class PostgresDB {
     await this.ensureReady();
     const data = backup?.data || backup;
     if (!data) return false;
-    if (data.settings) await this.updateSettings(data.settings);
-    if (Array.isArray(data.budgets)) await this.updateBudgets(data.budgets);
-    if (data.cycleSettings) await this.updateCycleSettings(data.cycleSettings);
-    return true;
+
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      if (data.settings) {
+        const currentRes = await client.query('SELECT data FROM settings WHERE id = 1');
+        const current = currentRes.rows.length ? (currentRes.rows[0].data as AppSettings) : DEFAULT_SETTINGS;
+        const merged = normalizeSettings({ ...current, ...data.settings });
+        await client.query('INSERT INTO settings (id, data, updated_at) VALUES (1, $1, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', [JSON.stringify(merged)]);
+      }
+
+      if (data.cycleSettings) {
+        const currentRes = await client.query('SELECT data FROM cycle_settings WHERE id = 1');
+        const current = currentRes.rows.length ? currentRes.rows[0].data : DEFAULT_CYCLE_SETTINGS;
+        const updated = { ...DEFAULT_CYCLE_SETTINGS, ...current, ...data.cycleSettings };
+        await client.query('INSERT INTO cycle_settings (id, data, updated_at) VALUES (1, $1, now()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()', [JSON.stringify(updated)]);
+      }
+
+      if (Array.isArray(data.budgets)) {
+        await client.query('DELETE FROM budgets');
+        for (const b of data.budgets) {
+          await client.query('INSERT INTO budgets (category, monthly_limit) VALUES ($1, $2) ON CONFLICT (category) DO UPDATE SET monthly_limit = $2', [b.category, b.monthlyLimit]);
+        }
+      }
+
+      if (Array.isArray(data.transactions)) {
+        await client.query('DELETE FROM transactions');
+        for (const tx of data.transactions) {
+          await client.query(
+            `INSERT INTO transactions (id, title, amount, type, category, paid_by, date, notes, vendor, receipt_url, is_recurring, recurring_day, recurring_frequency, created_at)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+            [
+              tx.id || genId('tx'),
+              tx.title,
+              tx.amount,
+              tx.type || 'EXPENSE',
+              tx.category,
+              tx.paidBy,
+              tx.date,
+              tx.notes || null,
+              tx.vendor || null,
+              tx.receiptUrl || null,
+              tx.isRecurring || false,
+              tx.recurringDay || null,
+              tx.recurringFrequency || null,
+              tx.createdAt || new Date().toISOString(),
+            ]
+          );
+        }
+      }
+
+      if (Array.isArray(data.bills)) {
+        await client.query('DELETE FROM bills');
+        for (const b of data.bills) {
+          await client.query(
+            'INSERT INTO bills (id, title, amount, category, paid_by, due_date_day, is_paid_this_month, autopay, provider) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+            [b.id || genId('bill'), b.title, b.amount, b.category, b.paidBy, b.dueDateDay, Boolean(b.isPaidThisMonth), Boolean(b.autopay), b.provider || null]
+          );
+        }
+      }
+
+      if (Array.isArray(data.recurringExpenses)) {
+        await client.query('DELETE FROM recurring_expenses');
+        for (const r of data.recurringExpenses) {
+          await client.query(
+            'INSERT INTO recurring_expenses (id, title, amount, category, paid_by, start_date, interval, is_active, notes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+            [r.id || genId('rec'), r.title, r.amount, r.category, r.paidBy, r.startDate, r.interval, Boolean(r.isActive), r.notes || null]
+          );
+        }
+      }
+
+      if (Array.isArray(data.cycleLogs)) {
+        await client.query('DELETE FROM cycle_logs');
+        for (const log of data.cycleLogs) {
+          await client.query(
+            `INSERT INTO cycle_logs (date, flow, symptoms, mood, medications, pain_level, notes, is_period_start, is_period_end)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [
+              log.date,
+              log.flow || null,
+              JSON.stringify(log.symptoms || []),
+              JSON.stringify(log.mood || []),
+              JSON.stringify(log.medications || []),
+              log.painLevel || 0,
+              log.notes || null,
+              Boolean(log.isPeriodStart),
+              Boolean(log.isPeriodEnd),
+            ]
+          );
+        }
+      }
+
+      if (Array.isArray(data.groceryItems)) {
+        await client.query('DELETE FROM grocery_items');
+        for (const g of data.groceryItems) {
+          await client.query(
+            `INSERT INTO grocery_items (id, title, category, quantity, is_checked, checked_at, checked_by, assigned_to, added_by, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+            [g.id || genId('groc'), g.title, g.category, g.quantity || null, Boolean(g.isChecked), g.checkedAt || null, g.checkedBy || null, g.assignedTo || null, g.addedBy || 'partner_a', g.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.todos)) {
+        await client.query('DELETE FROM todos');
+        for (const t of data.todos) {
+          await client.query(
+            `INSERT INTO todos (id, title, description, assigned_to, priority, due_date, is_completed, completed_at, completed_by, category, created_by, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+            [t.id || genId('todo'), t.title, t.description || null, t.assignedTo || null, t.priority || 'MEDIUM', t.dueDate || null, Boolean(t.isCompleted), t.completedAt || null, t.completedBy || null, t.category || 'Other', t.createdBy || 'partner_a', t.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.coupleNotes)) {
+        await client.query('DELETE FROM couple_notes');
+        for (const n of data.coupleNotes) {
+          await client.query(
+            `INSERT INTO couple_notes (id, title, content, category, color, is_pinned, author, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [n.id || genId('note'), n.title, n.content, n.category || 'General', n.color || 'zinc', Boolean(n.isPinned), n.author || 'partner_a', n.createdAt || new Date().toISOString(), n.updatedAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.wishGoals)) {
+        await client.query('DELETE FROM wish_goals');
+        for (const w of data.wishGoals) {
+          await client.query(
+            `INSERT INTO wish_goals (id, title, target_amount, current_amount, category, icon, target_date, is_completed, completed_at, is_shared, owner, priority, notes, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+            [w.id || genId('goal'), w.title, w.targetAmount, w.currentAmount || 0, w.category || 'Other', w.icon || null, w.targetDate || null, Boolean(w.isCompleted), w.completedAt || null, w.isShared !== undefined ? Boolean(w.isShared) : true, w.owner || 'partner_a', w.priority || 'MEDIUM', w.notes || null, w.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.importantDates)) {
+        await client.query('DELETE FROM important_dates');
+        for (const d of data.importantDates) {
+          await client.query(
+            `INSERT INTO important_dates (id, title, date, type, is_recurring_yearly, notes, reminder_days_before, icon, color, created_by, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [d.id || genId('date'), d.title, d.date, d.type || 'EVENT', Boolean(d.isRecurringYearly), d.notes || null, d.reminderDaysBefore !== undefined ? d.reminderDaysBefore : 1, d.icon || null, d.color || 'indigo', d.createdBy || 'partner_a', d.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+      return true;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 }
 
