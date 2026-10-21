@@ -111,8 +111,11 @@ apiRouter.get('/settings', async (req, res) => {
 });
 
 apiRouter.post('/settings', async (req, res) => {
-  try { res.json(await db.updateSettings(req.body)); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
+  try {
+    if (!req.body || typeof req.body !== 'object') return res.status(400).json({ error: 'Invalid settings payload' });
+    res.json(await db.updateSettings(req.body));
+  }
+  catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/settings/test-key', async (req, res) => {
@@ -196,18 +199,21 @@ apiRouter.get(['/household/summary', '/settlements/summary'], async (req, res) =
 // --- BUDGETS ---
 apiRouter.get('/budgets', async (req, res) => {
   try { res.json(await db.getBudgets()); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
+  catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/budgets', async (req, res) => {
-  try { res.json(await db.updateBudgets(req.body)); }
-  catch (err: any) { res.status(400).json({ error: err.message }); }
+  try {
+    if (!Array.isArray(req.body)) return res.status(400).json({ error: 'Budgets array is required' });
+    res.json(await db.updateBudgets(req.body));
+  }
+  catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 // --- RECURRING EXPENSES ---
 apiRouter.get('/recurring-expenses', async (req, res) => {
   try { res.json(await db.getRecurringExpenses()); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
+  catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/recurring-expenses', async (req, res) => {
@@ -234,7 +240,7 @@ apiRouter.delete('/recurring-expenses/:id', async (req, res) => {
 // --- BILLS ---
 apiRouter.get('/bills', async (req, res) => {
   try { res.json(await db.getBills()); }
-  catch (err: any) { res.status(500).json({ error: err.message }); }
+  catch (err: any) { res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') }); }
 });
 
 apiRouter.post('/bills', async (req, res) => {
@@ -758,16 +764,17 @@ apiRouter.get('/backup/export', async (_req, res) => {
     const backup = await (db as any).exportBackup();
     res.json(backup);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') });
   }
 });
 
 apiRouter.post('/backup/import', async (req, res) => {
   try {
+    if (!req.body) return res.status(400).json({ error: 'Backup data is required' });
     const success = await (db as any).importBackup(req.body);
     res.json({ success });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(503).json({ error: publicError(err, 'Service temporarily unavailable') });
   }
 });
 

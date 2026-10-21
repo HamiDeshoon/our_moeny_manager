@@ -141,4 +141,64 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
       if (origUrl) process.env.DATABASE_URL = origUrl; else delete process.env.DATABASE_URL;
     }
   });
+
+  it('exports and imports backup data in LocalFileDB correctly', async () => {
+    const localDb = new LocalFileDB();
+    const backup = await localDb.exportBackup();
+    expect(backup).toHaveProperty('version');
+    expect(backup).toHaveProperty('data');
+    expect(backup.data).toHaveProperty('settings');
+
+    const success = await localDb.importBackup(backup);
+    expect(success).toBe(true);
+  });
+
+  it('executes full table restore inside transaction block during PostgresDB importBackup', async () => {
+    const queriesExecuted: { sql: string; params?: any[] }[] = [];
+    let released = false;
+
+    const mockClient = {
+      query: vi.fn(async (sql: string, params?: any[]) => {
+        queriesExecuted.push({ sql, params });
+        return { rows: [], rowCount: 1 };
+      }),
+      release: vi.fn(() => {
+        released = true;
+      }),
+    };
+
+    const pgDb = Object.create(PostgresDB.prototype);
+    pgDb.ready = Promise.resolve();
+    pgDb.pool = {
+      connect: vi.fn(async () => mockClient),
+    };
+
+    const dummyBackup = {
+      version: '1.4.0',
+      data: {
+        settings: {},
+        budgets: [{ category: 'Food', monthlyLimit: 500 }],
+        transactions: [{ id: 'tx-1', title: 'Test Tx', amount: 50, category: 'Food', paidBy: 'partner_a', date: '2026-03-01' }],
+        bills: [{ id: 'b-1', title: 'Test Bill', amount: 100, category: 'Utilities', paidBy: 'partner_a', dueDateDay: 5, isPaidThisMonth: false, autopay: false }],
+        recurringExpenses: [{ id: 'r-1', title: 'Test Rec', amount: 200, category: 'Rent', paidBy: 'partner_a', startDate: '2026-01-01', interval: 'MONTHLY', isActive: true }],
+        cycleLogs: [{ date: '2026-03-01', flow: 'medium' }],
+        groceryItems: [{ id: 'g-1', title: 'Apples', category: 'Food', addedBy: 'partner_a' }],
+        todos: [{ id: 't-1', title: 'Clean house', category: 'Chore', createdBy: 'partner_a' }],
+        coupleNotes: [{ id: 'n-1', title: 'Note', content: 'Text', author: 'partner_a' }],
+        wishGoals: [{ id: 'w-1', title: 'Trip', targetAmount: 1000, owner: 'partner_a' }],
+        importantDates: [{ id: 'd-1', title: 'Birthday', date: '2026-05-01', createdBy: 'partner_a' }],
+      },
+    };
+
+    const success = await pgDb.importBackup(dummyBackup);
+    expect(success).toBe(true);
+    expect(released).toBe(true);
+
+    const sqls = queriesExecuted.map((q) => q.sql);
+    expect(sqls[0]).toBe('BEGIN');
+    expect(sqls[sqls.length - 1]).toBe('COMMIT');
+
+    const deleteQueries = queriesExecuted.filter((q) => q.sql.startsWith('DELETE FROM'));
+    expect(deleteQueries.length).toBe(10); // budgets, transactions, bills, recurring_expenses, cycle_logs, grocery_items, todos, couple_notes, wish_goals, important_dates
+  });
 });
