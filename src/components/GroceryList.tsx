@@ -12,6 +12,11 @@ import { useListManager } from '../hooks/useListManager';
 interface GroceryListProps {
   settings: AppSettings;
   currentUser: AuthUser | null;
+  groceryItems?: GroceryItem[];
+  onAddGrocery?: (item: Omit<GroceryItem, 'id' | 'createdAt' | 'isChecked'>) => Promise<void>;
+  onToggleGrocery?: (id: string, isChecked: boolean) => Promise<void>;
+  onDeleteGrocery?: (id: string) => Promise<void>;
+  onClearChecked?: () => Promise<void>;
 }
 
 const CATEGORIES: { id: GroceryCategory; label: string; icon: string }[] = [
@@ -27,7 +32,15 @@ const CATEGORIES: { id: GroceryCategory; label: string; icon: string }[] = [
   { id: 'Other', label: 'سایر موارد', icon: '📦' },
 ];
 
-export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser }) => {
+export const GroceryList: React.FC<GroceryListProps> = ({
+  settings,
+  currentUser,
+  groceryItems: propItems,
+  onAddGrocery,
+  onToggleGrocery,
+  onDeleteGrocery,
+  onClearChecked,
+}) => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
 
@@ -42,56 +55,80 @@ export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser 
 
   const fetchItems = useCallback(() => api.getGroceryItems(), []);
 
-  const { items, loading, updateItemOptimistic, addItem } = useListManager<GroceryItem>({
+  const { items: managedItems, loading: managedLoading, updateItemOptimistic, addItem } = useListManager<GroceryItem>({
     fetchItems,
     onError: (err, action) => {
       console.error(`Failed during grocery list ${action}`, err);
     },
   });
 
+  const isControlled = propItems !== undefined;
+  const items = isControlled ? propItems : managedItems;
+  const loading = isControlled ? false : managedLoading;
+
   const handleToggle = async (item: GroceryItem) => {
     haptic('light');
     const newChecked = !item.isChecked;
 
-    await updateItemOptimistic(
-      (prev) =>
-        prev.map((i) =>
-          i.id === item.id
-            ? {
-                ...i,
-                isChecked: newChecked,
-                checkedAt: newChecked ? new Date().toISOString() : undefined,
-                checkedBy: newChecked ? (currentUser?.partnerId || 'partner_a') : undefined,
-              }
-            : i
-        ),
-      async () => {
-        await api.toggleGroceryItem(item.id, newChecked);
+    if (isControlled) {
+      if (onToggleGrocery) {
+        await onToggleGrocery(item.id, newChecked);
         if (newChecked) haptic('success');
       }
-    );
+    } else {
+      await updateItemOptimistic(
+        (prev) =>
+          prev.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  isChecked: newChecked,
+                  checkedAt: newChecked ? new Date().toISOString() : undefined,
+                  checkedBy: newChecked ? (currentUser?.partnerId || 'partner_a') : undefined,
+                }
+              : i
+          ),
+        async () => {
+          await api.toggleGroceryItem(item.id, newChecked);
+          if (newChecked) haptic('success');
+        }
+      );
+    }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     haptic('warning');
 
-    await updateItemOptimistic(
-      (prev) => prev.filter((i) => i.id !== id),
-      () => api.deleteGroceryItem(id)
-    );
+    if (isControlled) {
+      if (onDeleteGrocery) {
+        await onDeleteGrocery(id);
+      }
+    } else {
+      await updateItemOptimistic(
+        (prev) => prev.filter((i) => i.id !== id),
+        () => api.deleteGroceryItem(id)
+      );
+    }
   };
 
   const handleClearChecked = async () => {
     haptic('medium');
 
-    await updateItemOptimistic(
-      (prev) => prev.filter((i) => !i.isChecked),
-      async () => {
-        await api.clearCheckedGroceryItems();
+    if (isControlled) {
+      if (onClearChecked) {
+        await onClearChecked();
         haptic('success');
       }
-    );
+    } else {
+      await updateItemOptimistic(
+        (prev) => prev.filter((i) => !i.isChecked),
+        async () => {
+          await api.clearCheckedGroceryItems();
+          haptic('success');
+        }
+      );
+    }
   };
 
   const handleAddItem = async (e: React.FormEvent) => {
@@ -100,24 +137,29 @@ export const GroceryList: React.FC<GroceryListProps> = ({ settings, currentUser 
 
     haptic('medium');
     const addedBy = currentUser?.partnerId || 'partner_a';
+    const itemData = {
+      title: title.trim(),
+      category,
+      quantity: quantity.trim() || undefined,
+      assignedTo: assignedTo || undefined,
+      addedBy,
+    };
 
     try {
-      await addItem(() =>
-        api.addGroceryItem({
-          title: title.trim(),
-          category,
-          quantity: quantity.trim() || undefined,
-          assignedTo: assignedTo || undefined,
-          addedBy,
-        })
-      );
+      if (isControlled) {
+        if (onAddGrocery) {
+          await onAddGrocery(itemData);
+        }
+      } else {
+        await addItem(() => api.addGroceryItem(itemData));
+      }
       setTitle('');
       setQuantity('');
       setAssignedTo('');
       setIsAddOpen(false);
       haptic('success');
     } catch (err) {
-      // Error handled by hook or catch block
+      // Error handled by caller
     }
   };
 
