@@ -53,7 +53,9 @@ export const GroceryList: React.FC<GroceryListProps> = ({
   const partnerAName = settings.partnerA?.name || 'حامد';
   const partnerBName = settings.partnerB?.name || 'فاطی';
 
-  const fetchItems = useCallback(() => (propItems !== undefined ? Promise.resolve([]) : api.getGroceryItems()), [propItems]);
+  const isControlled = propItems !== undefined;
+
+  const fetchItems = useCallback(() => (isControlled ? Promise.resolve([]) : api.getGroceryItems()), [isControlled]);
 
   const { items: managedItems, loading: managedLoading, updateItemOptimistic, addItem } = useListManager<GroceryItem>({
     fetchItems,
@@ -62,7 +64,6 @@ export const GroceryList: React.FC<GroceryListProps> = ({
     },
   });
 
-  const isControlled = propItems !== undefined;
   const items = isControlled ? propItems : managedItems;
   const loading = isControlled ? false : managedLoading;
 
