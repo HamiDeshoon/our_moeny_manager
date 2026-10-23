@@ -25,7 +25,7 @@ const chips: Array<{ id: Filter; label: string }> = [
   { id: 'dining', label: 'غذا' },
 ];
 
-export const TransactionList: React.FC<TransactionListProps> = ({
+export const TransactionList: React.FC<TransactionListProps> = React.memo(({
   transactions,
   settings,
   pendingIds,
@@ -162,4 +162,6 @@ export const TransactionList: React.FC<TransactionListProps> = ({
       />
     </section>
   );
-};
+});
+
+TransactionList.displayName = 'TransactionList';
