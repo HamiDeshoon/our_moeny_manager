@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Wallet } from 'lucide-react';
 import { APP_VERSION, AppSettings, HouseholdSummary } from '../types';
@@ -9,12 +9,15 @@ interface SummaryCardsProps {
   settings: AppSettings;
 }
 
-export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings }) => {
+export const SummaryCards: React.FC<SummaryCardsProps> = React.memo(({ summary, settings }) => {
   const symbol = settings.currencySymbol || 'تومان';
-  const totalSpent = summary.partnerATotalPaid + summary.partnerBTotalPaid;
 
-  const partnerAPercent = totalSpent > 0 ? Math.round((summary.partnerATotalPaid / totalSpent) * 100) : 50;
-  const partnerBPercent = totalSpent > 0 ? Math.round((summary.partnerBTotalPaid / totalSpent) * 100) : 50;
+  const { totalSpent, partnerAPercent, partnerBPercent } = useMemo(() => {
+    const total = summary.partnerATotalPaid + summary.partnerBTotalPaid;
+    const aPct = total > 0 ? Math.round((summary.partnerATotalPaid / total) * 100) : 50;
+    const bPct = total > 0 ? Math.round((summary.partnerBTotalPaid / total) * 100) : 50;
+    return { totalSpent: total, partnerAPercent: aPct, partnerBPercent: bPct };
+  }, [summary.partnerATotalPaid, summary.partnerBTotalPaid]);
 
   return (
     <motion.div 
@@ -133,4 +136,6 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ summary, settings })
       </div>
     </motion.div>
   );
-};
+});
+
+SummaryCards.displayName = 'SummaryCards';

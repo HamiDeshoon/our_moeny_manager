@@ -43,7 +43,25 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
       created_at: new Date().toISOString(),
     }));
 
+    const mockClient = {
+      query: vi.fn(async (sql: string, params?: any[]) => {
+        queriesExecuted.push({ sql, params });
+        if (sql.includes('SELECT * FROM transactions WHERE is_recurring = true')) {
+          return { rows: sampleTemplates, rowCount: N };
+        }
+        if (sql.includes('SELECT DISTINCT title FROM transactions WHERE date LIKE')) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (sql.includes('INSERT INTO transactions')) {
+          return { rows: [], rowCount: params ? params.length / 14 : 1 };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+      release: vi.fn(),
+    };
+
     pgDb.pool = {
+      connect: vi.fn(async () => mockClient),
       query: vi.fn(async (sql: string, params?: any[]) => {
         queriesExecuted.push({ sql, params });
         if (sql.includes('SELECT * FROM transactions WHERE is_recurring = true')) {
@@ -63,7 +81,8 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     const added = await pgDb.processRecurringExpenses(targetMonth);
 
     expect(added.length).toBe(N);
-    expect(queriesExecuted.length).toBe(3); // 1 select templates + 1 select existing + 1 bulk insert
+    // 1 select templates + 1 select existing + 1 BEGIN + 1 bulk insert + 1 COMMIT = 5 queries
+    expect(queriesExecuted.length).toBe(5);
   });
 
   it('verifies 2 queries when all recurring expenses already exist', async () => {
@@ -105,16 +124,22 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     expect(queriesExecuted.length).toBe(2); // Only template fetch and existence check
   });
 
-  it('verifies PostgresDB batchAddTransactions builds single bulk insert statement', async () => {
+  it('verifies PostgresDB batchAddTransactions builds single bulk insert statement in a transaction', async () => {
     const queriesExecuted: { sql: string; params?: any[] }[] = [];
 
-    const pgDb = Object.create(PostgresDB.prototype);
-    pgDb.ready = Promise.resolve();
-    pgDb.pool = {
+    const mockClient = {
       query: vi.fn(async (sql: string, params?: any[]) => {
         queriesExecuted.push({ sql, params });
         return { rows: [], rowCount: params ? params.length / 14 : 0 };
       }),
+      release: vi.fn(),
+    };
+
+    const pgDb = Object.create(PostgresDB.prototype);
+    pgDb.ready = Promise.resolve();
+    pgDb.pool = {
+      connect: vi.fn(async () => mockClient),
+      query: mockClient.query,
     };
 
     const itemsToAdd = [
@@ -126,9 +151,11 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     const res = await pgDb.batchAddTransactions(itemsToAdd);
 
     expect(res.length).toBe(3);
-    expect(queriesExecuted.length).toBe(1);
-    expect(queriesExecuted[0].sql).toContain('INSERT INTO transactions');
-    expect(queriesExecuted[0].params?.length).toBe(3 * 14);
+    expect(queriesExecuted.length).toBe(3); // BEGIN, INSERT, COMMIT
+    expect(queriesExecuted[0].sql).toBe('BEGIN');
+    expect(queriesExecuted[1].sql).toContain('INSERT INTO transactions');
+    expect(queriesExecuted[1].params?.length).toBe(3 * 14);
+    expect(queriesExecuted[2].sql).toBe('COMMIT');
   });
 
   it('throws an error when initialized with an HTTPS web URL instead of a PostgreSQL URI', () => {
@@ -199,6 +226,6 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     expect(sqls[sqls.length - 1]).toBe('COMMIT');
 
     const deleteQueries = queriesExecuted.filter((q) => q.sql.startsWith('DELETE FROM'));
-    expect(deleteQueries.length).toBe(10); // budgets, transactions, bills, recurring_expenses, cycle_logs, grocery_items, todos, couple_notes, wish_goals, important_dates
+    expect(deleteQueries.length).toBe(10); // budgets, transactions, bills, recurring_expenses, cycle_logs, grocery_items, todos, couple_notes, wishGoals, important_dates
   });
 });

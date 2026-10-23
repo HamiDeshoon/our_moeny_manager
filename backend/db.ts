@@ -539,50 +539,61 @@ export class PostgresDB {
 
     const BATCH_SIZE = 500;
     const created: Transaction[] = [];
+    const client = await this.pool.connect();
 
-    for (let i = 0; i < items.length; i += BATCH_SIZE) {
-      const chunk = items.slice(i, i + BATCH_SIZE);
-      const values: any[] = [];
-      const valueTuples: string[] = [];
-      let paramIdx = 1;
+    try {
+      await client.query('BEGIN');
 
-      for (const tx of chunk) {
-        const id = genId('tx');
-        const createdAt = new Date().toISOString();
-        const fullTx: Transaction = { ...tx, id, createdAt } as Transaction;
-        created.push(fullTx);
+      for (let i = 0; i < items.length; i += BATCH_SIZE) {
+        const chunk = items.slice(i, i + BATCH_SIZE);
+        const values: any[] = [];
+        const valueTuples: string[] = [];
+        let paramIdx = 1;
 
-        valueTuples.push(
-          `($${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++})`
-        );
+        for (const tx of chunk) {
+          const id = genId('tx');
+          const createdAt = new Date().toISOString();
+          const fullTx: Transaction = { ...tx, id, createdAt } as Transaction;
+          created.push(fullTx);
 
-        values.push(
-          id,
-          tx.title,
-          tx.amount,
-          tx.type || 'EXPENSE',
-          tx.category,
-          tx.paidBy,
-          tx.date,
-          tx.notes || null,
-          tx.vendor || null,
-          tx.receiptUrl || null,
-          tx.isRecurring || false,
-          tx.recurringDay || null,
-          tx.recurringFrequency || null,
-          createdAt
-        );
+          valueTuples.push(
+            `($${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++},$${paramIdx++})`
+          );
+
+          values.push(
+            id,
+            tx.title,
+            tx.amount,
+            tx.type || 'EXPENSE',
+            tx.category,
+            tx.paidBy,
+            tx.date,
+            tx.notes || null,
+            tx.vendor || null,
+            tx.receiptUrl || null,
+            tx.isRecurring || false,
+            tx.recurringDay || null,
+            tx.recurringFrequency || null,
+            createdAt
+          );
+        }
+
+        const query = `
+          INSERT INTO transactions (id, title, amount, type, category, paid_by, date, notes, vendor, receipt_url, is_recurring, recurring_day, recurring_frequency, created_at)
+          VALUES ${valueTuples.join(', ')}
+        `;
+
+        await client.query(query, values);
       }
 
-      const query = `
-        INSERT INTO transactions (id, title, amount, type, category, paid_by, date, notes, vendor, receipt_url, is_recurring, recurring_day, recurring_frequency, created_at)
-        VALUES ${valueTuples.join(', ')}
-      `;
-
-      await this.pool.query(query, values);
+      await client.query('COMMIT');
+      return created;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    return created;
   }
 
   async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
