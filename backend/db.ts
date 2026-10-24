@@ -1417,6 +1417,9 @@ export class PostgresDB {
     const coupleNotes = await this.getCoupleNotes();
     const wishGoals = await this.getWishGoals();
     const importantDates = await this.getImportantDates();
+    const habits = await this.getHabits();
+    const habitLogs = await this.getHabitLogs();
+    const coupleCheckins = await this.getCoupleCheckins();
     return {
       version: '1.4.0',
       exportedAt: new Date().toISOString(),
@@ -1433,6 +1436,9 @@ export class PostgresDB {
         coupleNotes,
         wishGoals,
         importantDates,
+        habits,
+        habitLogs,
+        coupleCheckins,
       }
     };
   }
@@ -1585,6 +1591,39 @@ export class PostgresDB {
             `INSERT INTO important_dates (id, title, date, type, is_recurring_yearly, notes, reminder_days_before, icon, color, created_by, created_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
             [d.id || genId('date'), d.title, d.date, d.type || 'EVENT', Boolean(d.isRecurringYearly), d.notes || null, d.reminderDaysBefore !== undefined ? d.reminderDaysBefore : 1, d.icon || null, d.color || 'indigo', d.createdBy || 'partner_a', d.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.habits)) {
+        await client.query('DELETE FROM habits');
+        for (const h of data.habits) {
+          await client.query(
+            `INSERT INTO habits (id, title, description, category, assigned_to, frequency, target_days_per_week, icon, color, created_by, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [h.id || genId('habit'), h.title, h.description || null, h.category || 'Other', h.assignedTo || 'both', h.frequency || 'DAILY', h.targetDaysPerWeek || null, h.icon || null, h.color || 'emerald', h.createdBy || 'partner_a', h.createdAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.habitLogs)) {
+        await client.query('DELETE FROM habit_logs');
+        for (const hl of data.habitLogs) {
+          await client.query(
+            `INSERT INTO habit_logs (id, habit_id, date, completed_by, completed_at)
+             VALUES ($1, $2, $3, $4, $5)`,
+            [hl.id || genId('hlog'), hl.habitId, hl.date, hl.completedBy || 'partner_a', hl.completedAt || new Date().toISOString()]
+          );
+        }
+      }
+
+      if (Array.isArray(data.coupleCheckins)) {
+        await client.query('DELETE FROM couple_checkins');
+        for (const c of data.coupleCheckins) {
+          await client.query(
+            `INSERT INTO couple_checkins (id, date, partner_id, mood, appreciation_note, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [c.id || genId('chkin'), c.date, c.partnerId, c.mood, c.appreciationNote || null, c.createdAt || new Date().toISOString()]
           );
         }
       }
@@ -2293,6 +2332,9 @@ export class LocalFileDB {
         coupleNotes: this.store.coupleNotes,
         wishGoals: this.store.wishGoals,
         importantDates: this.store.importantDates,
+        habits: this.store.habits,
+        habitLogs: this.store.habitLogs,
+        coupleCheckins: this.store.coupleCheckins,
       }
     };
   }
@@ -2312,6 +2354,9 @@ export class LocalFileDB {
     if (Array.isArray(data.coupleNotes)) this.store.coupleNotes = data.coupleNotes;
     if (Array.isArray(data.wishGoals)) this.store.wishGoals = data.wishGoals;
     if (Array.isArray(data.importantDates)) this.store.importantDates = data.importantDates;
+    if (Array.isArray(data.habits)) this.store.habits = data.habits;
+    if (Array.isArray(data.habitLogs)) this.store.habitLogs = data.habitLogs;
+    if (Array.isArray(data.coupleCheckins)) this.store.coupleCheckins = data.coupleCheckins;
     this.save();
     return true;
   }

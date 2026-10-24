@@ -144,13 +144,25 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
 
   it('exports and imports backup data in LocalFileDB correctly', async () => {
     const localDb = new LocalFileDB();
+    await localDb.addHabit({ title: 'Daily Workout', category: 'Fitness', assignedTo: 'both', frequency: 'DAILY', createdBy: 'partner_a' });
+    await localDb.saveCoupleCheckin({ date: '2026-03-01', partnerId: 'partner_a', mood: 'happy' });
+
     const backup = await localDb.exportBackup();
     expect(backup).toHaveProperty('version');
     expect(backup).toHaveProperty('data');
     expect(backup.data).toHaveProperty('settings');
+    expect(backup.data).toHaveProperty('habits');
+    expect(backup.data).toHaveProperty('habitLogs');
+    expect(backup.data).toHaveProperty('coupleCheckins');
+    expect(backup.data.habits.some((h: any) => h.title === 'Daily Workout')).toBe(true);
 
     const success = await localDb.importBackup(backup);
     expect(success).toBe(true);
+
+    const habits = await localDb.getHabits();
+    expect(habits.some((h) => h.title === 'Daily Workout')).toBe(true);
+    const checkins = await localDb.getCoupleCheckins('2026-03-01');
+    expect(checkins.some((c) => c.mood === 'happy')).toBe(true);
   });
 
   it('executes full table restore inside transaction block during PostgresDB importBackup', async () => {
@@ -187,6 +199,9 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
         coupleNotes: [{ id: 'n-1', title: 'Note', content: 'Text', author: 'partner_a' }],
         wishGoals: [{ id: 'w-1', title: 'Trip', targetAmount: 1000, owner: 'partner_a' }],
         importantDates: [{ id: 'd-1', title: 'Birthday', date: '2026-05-01', createdBy: 'partner_a' }],
+        habits: [{ id: 'h-1', title: 'Daily Meditation', createdBy: 'partner_a' }],
+        habitLogs: [{ id: 'hl-1', habitId: 'h-1', date: '2026-03-01', completedBy: 'partner_a', completedAt: '2026-03-01T10:00:00Z' }],
+        coupleCheckins: [{ id: 'c-1', date: '2026-03-01', partnerId: 'partner_a', mood: 'great' }],
       },
     };
 
@@ -199,6 +214,6 @@ describe('Database layer - Recurring expenses & batch transactions', () => {
     expect(sqls[sqls.length - 1]).toBe('COMMIT');
 
     const deleteQueries = queriesExecuted.filter((q) => q.sql.startsWith('DELETE FROM'));
-    expect(deleteQueries.length).toBe(10); // budgets, transactions, bills, recurring_expenses, cycle_logs, grocery_items, todos, couple_notes, wish_goals, important_dates
+    expect(deleteQueries.length).toBe(13); // budgets, transactions, bills, recurring_expenses, cycle_logs, grocery_items, todos, couple_notes, wish_goals, important_dates, habits, habit_logs, couple_checkins
   });
 });
