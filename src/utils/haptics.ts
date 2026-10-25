@@ -16,14 +16,15 @@ const patterns: Record<HapticPattern, number | number[]> = {
   error: [40, 20, 40, 20, 40],
 };
 
-export function haptic(pattern: HapticPattern = 'light') {
+export function haptic(pattern: HapticPattern = 'light'): boolean {
   try {
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      navigator.vibrate(patterns[pattern]);
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      return navigator.vibrate(patterns[pattern]);
     }
   } catch {
     // Silently fail — haptics are a nice-to-have
   }
+  return false;
 }
 
 /** Hook for React components */

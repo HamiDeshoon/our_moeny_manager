@@ -17,6 +17,8 @@ export function usePullToRefresh({ enabled, threshold = 72, onRefresh }: PullToR
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const originY = useRef<number | null>(null);
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
 
   return useMemo(() => ({
     pullDistance,
@@ -44,15 +46,26 @@ export function usePullToRefresh({ enabled, threshold = 72, onRefresh }: PullToR
           setPullDistance(0);
         }
       },
-      onTouchCancel: () => { originY.current = null; setPullDistance(0); },
+      onTouchCancel: () => {
+        originY.current = null;
+        setPullDistance(0);
+      },
       onTouchEnd: async () => {
         const shouldRefresh = originY.current !== null && pullDistance >= threshold && !isRefreshing;
         originY.current = null;
-        if (!shouldRefresh) { setPullDistance(0); return; }
+        if (!shouldRefresh) {
+          setPullDistance(0);
+          return;
+        }
         setIsRefreshing(true);
         setPullDistance(threshold);
-        try { await onRefresh(); } finally { setIsRefreshing(false); setPullDistance(0); }
+        try {
+          await onRefreshRef.current();
+        } finally {
+          setIsRefreshing(false);
+          setPullDistance(0);
+        }
       },
     },
-  }), [enabled, isRefreshing, onRefresh, pullDistance, threshold]);
+  }), [enabled, isRefreshing, pullDistance, threshold]);
 }
