@@ -337,6 +337,9 @@ export class PostgresDB {
         CONSTRAINT unique_habit_date_user UNIQUE (habit_id, date, completed_by)
       );
 
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_habit ON habit_logs(habit_id);
+
       CREATE TABLE IF NOT EXISTS couple_checkins (
         id TEXT PRIMARY KEY,
         date TEXT NOT NULL,
