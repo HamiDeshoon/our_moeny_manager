@@ -217,7 +217,11 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
                     fontSize: '12px',
                   }}
                 />
-                <Bar dataKey="amount" radius={[0, 8, 8, 0]} />
+                <Bar dataKey="amount" radius={[0, 8, 8, 0]}>
+                  {partnerData.map((entry, index) => (
+                    <Cell key={`partner-bar-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

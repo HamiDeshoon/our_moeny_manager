@@ -529,6 +529,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                         <input
                           type="number"
                           step="100000"
+                          min="0"
+                          aria-label={`سقف بودجه برای ${info.fa}`}
                           value={b.monthlyLimit}
                           onChange={(e) => handleLimitChange(b.category, e.target.value)}
                           className="w-24 bg-zinc-900 border border-white/20 rounded-lg px-2 py-1 text-white font-mono text-xs text-center focus:outline-none focus:border-teal-400"
@@ -871,6 +873,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                           type="button"
                           onClick={() => handleIncrementInstallment(loan.id)}
                           disabled={isCompleted}
+                          aria-label={`ثبت پرداخت یک قسط برای ${loan.title}`}
                           className="flex items-center gap-1 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-400/30 text-[11px] font-bold px-2.5 py-1 rounded-lg transition disabled:opacity-30"
                         >
                           <Plus className="w-3 h-3" />
@@ -881,6 +884,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                           type="button"
                           onClick={() => handleDecrementInstallment(loan.id)}
                           disabled={loan.paidInstallments === 0}
+                          aria-label={`کاهش یک قسط برای ${loan.title}`}
                           title="کاهش یک قسط در صورت اشتباه"
                           className="text-[10px] text-zinc-500 hover:text-zinc-300 px-2 py-1 rounded-lg transition disabled:opacity-20"
                         >
@@ -891,6 +895,7 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({
                       <button
                         type="button"
                         onClick={() => handleDeleteLoan(loan.id)}
+                        aria-label={`حذف وام ${loan.title}`}
                         title="حذف وام"
                         className="p-1.5 text-zinc-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition"
                       >
