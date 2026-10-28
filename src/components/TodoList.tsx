@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Check, Trash2, Clock, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { AppSettings, AuthUser, TodoCategory, TodoItem, TodoPriority } from '../types';
 import { api } from '../services/api';
-import { haptic } from '../utils/haptics';
+import { useHaptics } from '../hooks/useHaptics';
 import { formatJalaliDate } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
@@ -34,6 +34,7 @@ const PRIORITIES: { id: TodoPriority; label: string; color: string; bg: string }
 ];
 
 export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => {
+  const haptics = useHaptics();
   const [filter, setFilter] = useState<'ALL' | 'MINE' | 'PARTNER' | 'OVERDUE' | 'COMPLETED'>('ALL');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
@@ -63,7 +64,7 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
   const todayStr = new Date().toISOString().split('T')[0];
 
   const handleToggle = async (todo: TodoItem) => {
-    haptic('light');
+    haptics.tab();
     const newCompleted = !todo.isCompleted;
 
     await updateItemOptimistic(
@@ -80,13 +81,13 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
         ),
       async () => {
         await api.updateTodo(todo.id, { isCompleted: newCompleted });
-        if (newCompleted) haptic('success');
+        if (newCompleted) haptics.success();
       }
     );
   };
 
   const handleClearCompleted = async () => {
-    haptic('warning');
+    haptics.tab();
     await updateItemOptimistic(
       (prev) => prev.filter((t) => !t.isCompleted),
       () => api.clearCompletedTodos()
@@ -95,7 +96,7 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('warning');
+    haptics.tab();
 
     await updateItemOptimistic(
       (prev) => prev.filter((t) => t.id !== id),
@@ -107,7 +108,7 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
     e.preventDefault();
     if (!title.trim()) return;
 
-    haptic('medium');
+    haptics.tab();
     try {
       await addItem(() =>
         api.addTodo({
@@ -128,9 +129,9 @@ export const TodoList: React.FC<TodoListProps> = ({ settings, currentUser }) => 
       setDueDate('');
       setAssignedTo('');
       setIsAddOpen(false);
-      haptic('success');
+      haptics.success();
     } catch (err) {
-      // Error handled by hook or catch block
+      haptics.error();
     }
   };
 

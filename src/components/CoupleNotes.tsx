@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Pin, Trash2, Edit3, Heart, Tag, BookOpen, Clock } from 'lucide-react';
 import { AppSettings, AuthUser, CoupleNote, NoteCategory, NoteColor } from '../types';
 import { api } from '../services/api';
-import { haptic } from '../utils/haptics';
+import { useHaptics } from '../hooks/useHaptics';
 import { formatJalaliDate } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
@@ -42,6 +42,7 @@ const NOTE_COLORS: { id: NoteColor; label: string; border: string; bg: string; d
 ];
 
 export const CoupleNotes: React.FC<CoupleNotesProps> = ({ settings, currentUser }) => {
+  const haptics = useHaptics();
   const [notes, setNotes] = useState<CoupleNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
@@ -96,7 +97,7 @@ export const CoupleNotes: React.FC<CoupleNotesProps> = ({ settings, currentUser 
     e.preventDefault();
     if (!title.trim() || !content.trim()) return;
 
-    haptic('medium');
+    haptics.tab();
     try {
       if (editingNote) {
         const updated = await api.updateCoupleNote(editingNote.id, {
@@ -117,15 +118,16 @@ export const CoupleNotes: React.FC<CoupleNotesProps> = ({ settings, currentUser 
         setNotes((prev) => [newNote, ...prev]);
       }
       setIsEditOpen(false);
-      haptic('success');
+      haptics.success();
     } catch (err) {
       console.error('Failed to save note', err);
+      haptics.error();
     }
   };
 
   const handleTogglePin = async (note: CoupleNote, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('light');
+    haptics.tab();
     const newPinned = !note.isPinned;
     setNotes((prev) =>
       prev.map((n) => (n.id === note.id ? { ...n, isPinned: newPinned } : n))
@@ -134,18 +136,20 @@ export const CoupleNotes: React.FC<CoupleNotesProps> = ({ settings, currentUser 
       await api.toggleNotePin(note.id, newPinned);
     } catch (err) {
       console.error('Failed to toggle pin', err);
+      haptics.error();
       loadNotes();
     }
   };
 
   const handleDeleteNote = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('warning');
+    haptics.tab();
     setNotes((prev) => prev.filter((n) => n.id !== id));
     try {
       await api.deleteCoupleNote(id);
     } catch (err) {
       console.error('Failed to delete note', err);
+      haptics.error();
       loadNotes();
     }
   };
