@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Calendar, Clock, Heart, Trash2, Edit3, Bell, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { AppSettings, AuthUser, DateType, ImportantDate, NoteColor } from '../types';
 import { api } from '../services/api';
-import { haptic } from '../utils/haptics';
+import { useHaptics } from '../hooks/useHaptics';
 import { formatJalaliDate } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
@@ -24,6 +24,7 @@ const DATE_TYPES: { id: DateType; label: string; icon: string; color: string }[]
 ];
 
 export const ImportantDates: React.FC<ImportantDatesProps> = ({ settings, currentUser }) => {
+  const haptics = useHaptics();
   const [dates, setDates] = useState<ImportantDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -59,7 +60,7 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ settings, curren
     e.preventDefault();
     if (!title.trim() || !dateStr) return;
 
-    haptic('medium');
+    haptics.tab();
     try {
       const newDate = await api.addImportantDate({
         title: title.trim(),
@@ -78,20 +79,22 @@ export const ImportantDates: React.FC<ImportantDatesProps> = ({ settings, curren
       setIsRecurringYearly(true);
       setNotes('');
       setIsAddOpen(false);
-      haptic('success');
+      haptics.success();
     } catch (err) {
       console.error('Failed to add important date', err);
+      haptics.error();
     }
   };
 
   const handleDeleteDate = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('warning');
+    haptics.tab();
     setDates((prev) => prev.filter((d) => d.id !== id));
     try {
       await api.deleteImportantDate(id);
     } catch (err) {
       console.error('Failed to delete date', err);
+      haptics.error();
       loadDates();
     }
   };

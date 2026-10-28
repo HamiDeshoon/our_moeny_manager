@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Check, Trash2 } from 'lucide-react';
 import { AppSettings, AuthUser, GroceryCategory, GroceryItem } from '../types';
 import { api } from '../services/api';
-import { haptic } from '../utils/haptics';
+import { useHaptics } from '../hooks/useHaptics';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
@@ -41,6 +41,7 @@ export const GroceryList: React.FC<GroceryListProps> = ({
   onDeleteGrocery,
   onClearChecked,
 }) => {
+  const haptics = useHaptics();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [filterCategory, setFilterCategory] = useState<string>('ALL');
 
@@ -68,13 +69,13 @@ export const GroceryList: React.FC<GroceryListProps> = ({
   const loading = isControlled ? false : managedLoading;
 
   const handleToggle = async (item: GroceryItem) => {
-    haptic('light');
+    haptics.tab();
     const newChecked = !item.isChecked;
 
     if (isControlled) {
       if (onToggleGrocery) {
         await onToggleGrocery(item.id, newChecked);
-        if (newChecked) haptic('success');
+        if (newChecked) haptics.success();
       }
     } else {
       await updateItemOptimistic(
@@ -91,7 +92,7 @@ export const GroceryList: React.FC<GroceryListProps> = ({
           ),
         async () => {
           await api.toggleGroceryItem(item.id, newChecked);
-          if (newChecked) haptic('success');
+          if (newChecked) haptics.success();
         }
       );
     }
@@ -99,7 +100,7 @@ export const GroceryList: React.FC<GroceryListProps> = ({
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('warning');
+    haptics.tab();
 
     if (isControlled) {
       if (onDeleteGrocery) {
@@ -114,19 +115,19 @@ export const GroceryList: React.FC<GroceryListProps> = ({
   };
 
   const handleClearChecked = async () => {
-    haptic('medium');
+    haptics.tab();
 
     if (isControlled) {
       if (onClearChecked) {
         await onClearChecked();
-        haptic('success');
+        haptics.success();
       }
     } else {
       await updateItemOptimistic(
         (prev) => prev.filter((i) => !i.isChecked),
         async () => {
           await api.clearCheckedGroceryItems();
-          haptic('success');
+          haptics.success();
         }
       );
     }
@@ -136,7 +137,7 @@ export const GroceryList: React.FC<GroceryListProps> = ({
     e.preventDefault();
     if (!title.trim()) return;
 
-    haptic('medium');
+    haptics.tab();
     const addedBy = currentUser?.partnerId || 'partner_a';
     const itemData = {
       title: title.trim(),
@@ -158,9 +159,9 @@ export const GroceryList: React.FC<GroceryListProps> = ({
       setQuantity('');
       setAssignedTo('');
       setIsAddOpen(false);
-      haptic('success');
+      haptics.success();
     } catch (err) {
-      // Error handled by caller
+      haptics.error();
     }
   };
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Target, Heart, Check, Trash2, Coins, Calendar, Trophy, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { AppSettings, AuthUser, GoalCategory, TodoPriority, WishGoal } from '../types';
 import { api } from '../services/api';
-import { haptic } from '../utils/haptics';
+import { useHaptics } from '../hooks/useHaptics';
 import { formatMoney, formatJalaliDate } from '../utils/formatters';
 import { BottomSheet } from './ui/BottomSheet';
 import { Button } from './ui/Button';
@@ -31,6 +31,7 @@ const GOAL_CATEGORIES: { id: GoalCategory; label: string; icon: string }[] = [
 const EMOJI_PRESETS = ['✈️', '🏡', '💻', '🚗', '🎁', '🛋️', '💍', '🛡️', '🎯', '🏖️'];
 
 export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) => {
+  const haptics = useHaptics();
   const [goals, setGoals] = useState<WishGoal[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'shared' | 'personal'>('shared');
@@ -77,7 +78,7 @@ export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) =
     const amountNum = parseFloat(targetAmount.replace(/,/g, ''));
     if (!title.trim() || isNaN(amountNum) || amountNum <= 0) return;
 
-    haptic('medium');
+    haptics.tab();
     try {
       const newGoal = await api.addWishGoal({
         title: title.trim(),
@@ -97,14 +98,15 @@ export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) =
       setTargetDate('');
       setNotes('');
       setIsAddOpen(false);
-      haptic('success');
+      haptics.success();
     } catch (err) {
       console.error('Failed to add goal', err);
+      haptics.error();
     }
   };
 
   const handleToggleComplete = async (goal: WishGoal) => {
-    haptic('success');
+    haptics.success();
     const newCompleted = !goal.isCompleted;
     setGoals((prev) =>
       prev.map((g) =>
@@ -126,6 +128,7 @@ export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) =
       });
     } catch (err) {
       console.error('Failed to update goal completion', err);
+      haptics.error();
       loadGoals();
     }
   };
@@ -136,7 +139,7 @@ export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) =
     const addNum = parseFloat(depositAmount.replace(/,/g, ''));
     if (isNaN(addNum) || addNum <= 0) return;
 
-    haptic('success');
+    haptics.success();
     const goal = goals.find((g) => g.id === depositGoalId);
     if (!goal) return;
 
@@ -165,18 +168,20 @@ export const WishGoals: React.FC<WishGoalsProps> = ({ settings, currentUser }) =
       setDepositAmount('');
     } catch (err) {
       console.error('Failed to update goal deposit', err);
+      haptics.error();
       loadGoals();
     }
   };
 
   const handleDelete = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    haptic('warning');
+    haptics.tab();
     setGoals((prev) => prev.filter((g) => g.id !== id));
     try {
       await api.deleteWishGoal(id);
     } catch (err) {
       console.error('Failed to delete goal', err);
+      haptics.error();
       loadGoals();
     }
   };
