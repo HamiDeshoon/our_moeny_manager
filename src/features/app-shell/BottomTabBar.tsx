@@ -16,7 +16,7 @@ const tabs: Array<{ id: AppTab; label: string; icon: typeof House }> = [
   { id: 'profile', label: 'پروفایل', icon: UserRound },
 ];
 
-export function BottomTabBar({ activeTab, onChange }: BottomTabBarProps) {
+export const BottomTabBar = React.memo(function BottomTabBar({ activeTab, onChange }: BottomTabBarProps) {
   return (
     <nav aria-label="ناوبری اصلی" className="bottom-tab-bar fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0b1210]/95 pt-2 backdrop-blur-xl">
       <div className="mx-auto grid max-w-md grid-cols-6 gap-0.5">
@@ -38,4 +38,4 @@ export function BottomTabBar({ activeTab, onChange }: BottomTabBarProps) {
       </div>
     </nav>
   );
-}
+});
