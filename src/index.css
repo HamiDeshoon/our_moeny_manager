@@ -40,7 +40,6 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .bottom-tab-bar { padding-bottom:calc(.5rem + var(--safe-bottom)); padding-right:max(.75rem,var(--safe-right)); padding-left:max(.75rem,var(--safe-left)); }
 .dashboard-carousel { scroll-snap-type:x mandatory; scrollbar-width:none; } .dashboard-carousel::-webkit-scrollbar { display:none; } .dashboard-slide { scroll-snap-align:center; scroll-snap-stop:always; }
 .modal-scroll-lock { overflow:hidden; }
-.ptr-indicator { display:flex; align-items:center; justify-content:center; overflow:hidden; transition:height 0.1s ease; }
 .cycle-period { background-color:color-mix(in srgb,var(--duo-period) 24%,transparent); border-color:color-mix(in srgb,var(--duo-period) 70%,transparent); }
 .cycle-fertile { background-color:color-mix(in srgb,var(--duo-fertile) 20%,transparent); border-color:color-mix(in srgb,var(--duo-fertile) 60%,transparent); }
 .cycle-ovulation { background-color:color-mix(in srgb,var(--duo-ovulation) 24%,transparent); border-color:color-mix(in srgb,var(--duo-ovulation) 70%,transparent); }

@@ -523,13 +523,9 @@ export default function App() {
       ) : null}
 
       {pull.pullDistance > 0 ? (
-        <div
-          className="ptr-indicator py-2"
-          style={{ height: `${pull.pullDistance}px` }}
-        >
+        <div className="ptr-indicator">
           <RefreshCw
             className={`h-5 w-5 text-teal-300 ${pull.isRefreshing ? 'animate-spin' : ''}`}
-            style={{ transform: pull.isRefreshing ? undefined : `rotate(${Math.min(pull.pullDistance * 5, 360)}deg)` }}
           />
         </div>
       ) : null}
