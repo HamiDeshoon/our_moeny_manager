@@ -299,6 +299,8 @@ export class PostgresDB {
         created_at TEXT NOT NULL
       );
 
+      CREATE INDEX IF NOT EXISTS idx_grocery_items_checked ON grocery_items(is_checked);
+
       CREATE TABLE IF NOT EXISTS todos (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
@@ -313,6 +315,8 @@ export class PostgresDB {
         created_by TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
+
+      CREATE INDEX IF NOT EXISTS idx_todos_completed ON todos(is_completed);
 
       CREATE TABLE IF NOT EXISTS habits (
         id TEXT PRIMARY KEY,
@@ -337,6 +341,9 @@ export class PostgresDB {
         CONSTRAINT unique_habit_date_user UNIQUE (habit_id, date, completed_by)
       );
 
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);
+      CREATE INDEX IF NOT EXISTS idx_habit_logs_habit ON habit_logs(habit_id);
+
       CREATE TABLE IF NOT EXISTS couple_checkins (
         id TEXT PRIMARY KEY,
         date TEXT NOT NULL,
@@ -358,6 +365,8 @@ export class PostgresDB {
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
+
+      CREATE INDEX IF NOT EXISTS idx_couple_notes_pinned ON couple_notes(is_pinned, updated_at DESC);
 
       CREATE TABLE IF NOT EXISTS wish_goals (
         id TEXT PRIMARY KEY,

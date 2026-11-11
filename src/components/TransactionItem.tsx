@@ -13,7 +13,7 @@ interface TransactionItemProps {
   onOpenActions: (tx: Transaction) => void;
 }
 
-export function TransactionItem({ tx, settings, pending = false, onEdit, onDelete, onOpenActions }: TransactionItemProps) {
+export const TransactionItem = React.memo(function TransactionItem({ tx, settings, pending = false, onEdit, onDelete, onOpenActions }: TransactionItemProps) {
   const symbol = settings.currencySymbol || 'تومان';
   const typeIcon = tx.type === 'INCOME' ? ArrowDownRight : tx.type === 'TRANSFER' ? ArrowRightLeft : ArrowUpRight;
   const TypeIcon = typeIcon;
@@ -41,4 +41,4 @@ export function TransactionItem({ tx, settings, pending = false, onEdit, onDelet
       </motion.article>
     </div>
   );
-}
+});

@@ -14,7 +14,7 @@ const actions = [
   { id: 'manual', label: 'ثبت دستی', icon: PencilLine },
 ] as const;
 
-export function ContextualFab({ onManual, onReceipt, onVoice }: ContextualFabProps) {
+export const ContextualFab = React.memo(function ContextualFab({ onManual, onReceipt, onVoice }: ContextualFabProps) {
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -66,4 +66,4 @@ export function ContextualFab({ onManual, onReceipt, onVoice }: ContextualFabPro
       </AnimatePresence>
     </div>
   );
-}
+});

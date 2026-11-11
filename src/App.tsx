@@ -167,19 +167,25 @@ export default function App() {
     (modal: Exclude<ActiveModal, { kind: 'none' }>) => setActiveModal(modal),
     []
   );
-  const requireAuth = (modal: Exclude<ActiveModal, { kind: 'none' }>) =>
-    currentUser ? openModal(modal) : openModal({ kind: 'login' });
+  const requireAuth = useCallback(
+    (modal: Exclude<ActiveModal, { kind: 'none' }>) =>
+      currentUser ? openModal(modal) : openModal({ kind: 'login' }),
+    [currentUser, openModal]
+  );
 
   const updateSummary = useCallback(() => {
     void api.getHouseholdSummary(selectedMonth).then(setSummary).catch(() => undefined);
   }, [selectedMonth]);
 
-  const markPending = (id: string, pending: boolean) =>
-    setPendingIds((current) => {
-      const next = new Set(current);
-      pending ? next.add(id) : next.delete(id);
-      return next;
-    });
+  const markPending = useCallback(
+    (id: string, pending: boolean) =>
+      setPendingIds((current) => {
+        const next = new Set(current);
+        pending ? next.add(id) : next.delete(id);
+        return next;
+      }),
+    []
+  );
 
   const handleSaveTransaction = useCallback(
     async (data: Omit<Transaction, 'id' | 'createdAt'>) => {
