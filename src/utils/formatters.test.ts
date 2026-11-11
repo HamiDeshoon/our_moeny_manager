@@ -9,6 +9,7 @@ import {
   jalaliToGregorian,
   isJalaliLeapYear,
   getJalaliMonthDays,
+  getLocalDateStr,
 } from './formatters';
 
 describe('formatMoney', () => {
@@ -112,5 +113,13 @@ describe('Other formatter utilities', () => {
     expect(toJalaliShort('2026-03-21')).toBe('1405/01/01');
     expect(getJalaliMonthYear('2026-03-21')).toBe('فروردین 1405');
     expect(formatJalaliDate('2026-03-21')).toBe('1405/01/01 (1 فروردین)');
+  });
+
+  it('formats local date string as YYYY-MM-DD correctly', () => {
+    const d = new Date(2026, 2, 5); // March 5, 2026 in local time
+    expect(d.getFullYear()).toBe(2026);
+    expect(d.getMonth()).toBe(2);
+    expect(d.getDate()).toBe(5);
+    expect(getLocalDateStr(d)).toBe('2026-03-05');
   });
 });

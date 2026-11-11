@@ -211,6 +211,13 @@ export function formatJalaliDate(dateStr: string): string {
  * Cleanly formats a monetary amount according to the active currency symbol.
  * For Toman / تومان, handles large whole numbers without forcing .00 cents.
  */
+export function getLocalDateStr(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function formatMoney(amount: number, symbol: string = 'تومان'): string {
   const num = Number(amount) || 0;
   const isToman = symbol.includes('تومان') || symbol.toLowerCase().includes('toman') || symbol === 'IRT' || symbol === 'T';

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Flame, CheckCircle2, Circle, Plus, Trash2, Sparkles, Trophy } from 'lucide-react';
 import type { AppSettings, AuthUser, Habit, HabitCategory, HabitLog } from '../../types';
+import { getLocalDateStr } from '../../utils/formatters';
 
 interface HabitTrackerProps {
   habits: Habit[];
@@ -35,7 +36,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
   const [loading, setLoading] = useState(false);
 
   const isFa = settings.isRtl;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateStr();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,7 +77,7 @@ export const HabitTracker: React.FC<HabitTrackerProps> = ({
     let curr = new Date();
 
     for (let i = 0; i < 30; i++) {
-      const dStr = curr.toISOString().split('T')[0];
+      const dStr = getLocalDateStr(curr);
       if (logs.includes(dStr)) {
         streak++;
         curr.setDate(curr.getDate() - 1);
