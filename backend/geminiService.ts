@@ -46,6 +46,27 @@ function normalizePersianInput(input: string): string {
   return str;
 }
 
+/**
+ * Safely parses JSON string returned from Gemini response,
+ * removing any Markdown code block wrappers (```json ... ```) if present.
+ */
+function safeJsonParse<T>(rawText: string | undefined | null): T {
+  if (!rawText) return {} as T;
+  let text = rawText.trim();
+
+  // Strip Markdown code blocks if present
+  if (text.startsWith('```')) {
+    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch (e) {
+    console.error('[GeminiService] Failed to parse JSON response:', text);
+    return {} as T;
+  }
+}
+
 // ──────────────────────────────────────────────
 // Eval/Retry Loop — Core AI Call Engine
 // ──────────────────────────────────────────────
@@ -303,7 +324,7 @@ Output valid JSON matching the schema.
         contents,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
-      const parsed = JSON.parse(response.text || '{}') as AIParsedVoice;
+      const parsed = safeJsonParse<AIParsedVoice>(response.text);
       if (!parsed.actionType) parsed.actionType = 'LOG_EXPENSE';
       return parsed;
     },
@@ -381,7 +402,7 @@ Extract:
         contents: { parts: [imagePart, { text: promptText }] },
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
-      return JSON.parse(response.text || '{}') as AIScanReceipt;
+      return safeJsonParse<AIScanReceipt>(response.text);
     },
     { validate: validateReceiptResult, label: 'ReceiptScanner', maxRetries: 3 }
   );
@@ -454,7 +475,7 @@ TASK:
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
-      return JSON.parse(response.text || '{}') as AIInsightResponse;
+      return safeJsonParse<AIInsightResponse>(response.text);
     },
     { validate: validateInsightsResult, label: 'SpendingInsights', maxRetries: 3 }
   );
@@ -489,7 +510,7 @@ export async function analyzeCycleSpendingPatterns(
   const response = await callGeminiWithRetry<{ insights: CycleInsight[] }>(
     async () => {
       const result = await ai.models.generateContent({ model: MODEL, contents: prompt, config: { responseMimeType: 'application/json', responseSchema: schema } });
-      return JSON.parse(result.text || '{}') as { insights: CycleInsight[] };
+      return safeJsonParse<{ insights: CycleInsight[] }>(result.text);
     },
     { validate: validateCycleInsights, label: 'CycleInsights', maxRetries: 2 },
   );
@@ -570,7 +591,7 @@ RULES:
         contents: prompt,
         config: { responseMimeType: 'application/json', responseSchema: schema },
       });
-      return JSON.parse(response.text || '{}') as AIParsedSheetResult;
+      return safeJsonParse<AIParsedSheetResult>(response.text);
     },
     { validate: validateSheetResult, label: 'SheetParser', maxRetries: 3 }
   );
